@@ -17,7 +17,17 @@ from schemas import (
 )
 
 # Create tables (for simple deployment; for serious prod use Alembic)
-Base.metadata.create_all(bind=engine)
+# Create tables (for simple deployment; for serious prod use Alembic)
+import logging
+logger = logging.getLogger(__name__)
+
+try:
+    logger.info("Attempting to create database tables...")
+    Base.metadata.create_all(bind=engine)
+    logger.info("Database tables created successfully")
+except Exception as e:
+    logger.error(f"Database connection error on startup: {e}")
+    logger.warning("App will continue without database access")
 
 app = FastAPI(title="Produce Ordering Backend")
 
