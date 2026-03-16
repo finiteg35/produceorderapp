@@ -21,7 +21,7 @@ class InventoryOut(InventoryBase):
     id: int
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class OrderBase(BaseModel):
@@ -41,7 +41,7 @@ class OrderOut(OrderBase):
     id: int
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class SettingBase(BaseModel):
@@ -51,7 +51,7 @@ class SettingBase(BaseModel):
 
 class SettingOut(SettingBase):
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class AllowedDatesUpdate(BaseModel):

@@ -48,6 +48,11 @@ def read_root():
     return {"status": "ok", "message": "Produce Ordering Backend running"}
 
 
+@app.head("/")
+def head_root():
+    return None
+
+
 # ---------- INVENTORY ----------
 
 @app.get("/inventory", response_model=List[InventoryOut])
