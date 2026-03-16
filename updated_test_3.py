@@ -15,7 +15,7 @@ from kivy.animation import Animation
 # ---------------------------------------------------------
 # API CONFIG
 # ---------------------------------------------------------
-API_URL = "http://localhost:8000"
+API_URL = "https://produce-backend.onrender.com"
 
 # ---------------------------------------------------------
 # THEME COLORS
