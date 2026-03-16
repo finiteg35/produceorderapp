@@ -24,6 +24,15 @@ class Order(Base):
     submitted_at = Column(String, index=True)
 
 
+class Store(Base):
+    __tablename__ = "stores"
+
+    id = Column(Integer, primary_key=True, index=True)
+    store_name = Column(String, index=True)
+    username = Column(String, unique=True, index=True)
+    password = Column(String)
+
+
 class Setting(Base):
     __tablename__ = "settings"
 

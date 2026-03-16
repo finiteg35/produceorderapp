@@ -1,5 +1,6 @@
 # main.py
 import logging
+import os
 import sys
 from contextlib import asynccontextmanager
 from typing import List, Optional
@@ -9,7 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 
 from database import Base, engine, get_db
-from models import Inventory, Order, Setting
+from models import Inventory, Order, Setting, Store
 import crud
 from schemas import (
     InventoryOut,
@@ -18,6 +19,10 @@ from schemas import (
     OrderCreate,
     OrderOut,
     AllowedDatesUpdate,
+    StoreOut,
+    LoginRequest,
+    StoreLoginResponse,
+    OrderSubmitItem,
 )
 
 # ---------------------------------------------------------------------------
@@ -162,3 +167,69 @@ def get_allowed_dates(db: Session = Depends(get_db)):
 def update_allowed_dates(body: AllowedDatesUpdate, db: Session = Depends(get_db)):
     logger.info("PUT /settings/allowed_dates dates=%s", body.dates)
     return crud.set_allowed_dates(db, body.dates)
+
+
+# ---------- STORES ----------
+
+@app.get("/stores/", response_model=List[StoreOut])
+def list_stores(db: Session = Depends(get_db)):
+    logger.info("GET /stores/")
+    stores = crud.get_stores(db)
+    logger.info("Returning %d stores", len(stores))
+    return stores
+
+
+@app.post("/stores/reset-password/{store_id}")
+def reset_store_password(store_id: int, db: Session = Depends(get_db)):
+    logger.info("POST /stores/reset-password/%d", store_id)
+    store = crud.reset_store_password(db, store_id, "reset123")
+    if not store:
+        raise HTTPException(status_code=404, detail="Store not found")
+    return {"message": f"Password reset for {store.store_name}"}
+
+
+# ---------- AUTH ----------
+
+@app.post("/auth/store-login", response_model=StoreLoginResponse)
+def store_login(body: LoginRequest, db: Session = Depends(get_db)):
+    logger.info("POST /auth/store-login username=%s", body.username)
+    store = crud.get_store_by_username(db, body.username)
+    if not store or store.password != body.password:
+        raise HTTPException(status_code=401, detail="Invalid username or password")
+    return {"store_id": store.id, "store_name": store.store_name}
+
+
+@app.post("/auth/admin-login")
+def admin_login(body: LoginRequest):
+    import secrets
+    logger.info("POST /auth/admin-login username=%s", body.username)
+    admin_username = os.environ.get("ADMIN_USERNAME", "admin")
+    admin_password = os.environ.get("ADMIN_PASSWORD", "admin123")
+    user_ok = secrets.compare_digest(body.username, admin_username)
+    pass_ok = secrets.compare_digest(body.password, admin_password)
+    if not (user_ok and pass_ok):
+        raise HTTPException(status_code=401, detail="Invalid admin credentials")
+    return {"message": "Admin login successful"}
+
+
+# ---------- ORDERS SUBMIT ----------
+
+@app.post("/orders/submit", response_model=List[OrderOut])
+def submit_orders(items: List[OrderSubmitItem], db: Session = Depends(get_db)):
+    logger.info("POST /orders/submit count=%d", len(items))
+    created = []
+    for item in items:
+        store = crud.get_store_by_id(db, item.store_id)
+        if not store:
+            raise HTTPException(status_code=404, detail=f"Store id {item.store_id} not found")
+        order_in = OrderCreate(
+            store_name=store.store_name,
+            category=item.category,
+            item=item.item,
+            qty=item.qty,
+            delivery_date=item.delivery_date,
+            submitted_at=item.submitted_at,
+        )
+        created.append(crud.create_order(db, order_in))
+    logger.info("Submitted %d orders", len(created))
+    return created

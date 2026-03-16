@@ -56,3 +56,31 @@ class SettingOut(SettingBase):
 
 class AllowedDatesUpdate(BaseModel):
     dates: List[str]
+
+
+class StoreOut(BaseModel):
+    id: int
+    store_name: str
+    username: str
+
+    class Config:
+        from_attributes = True
+
+
+class LoginRequest(BaseModel):
+    username: str
+    password: str
+
+
+class StoreLoginResponse(BaseModel):
+    store_id: int
+    store_name: str
+
+
+class OrderSubmitItem(BaseModel):
+    store_id: int
+    category: str
+    item: str
+    qty: int
+    delivery_date: str
+    submitted_at: str
