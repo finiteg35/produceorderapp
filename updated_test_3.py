@@ -72,10 +72,9 @@ class ProduceApp(App):
 
     def load_allowed_dates_from_backend(self):
         try:
-            resp = requests.get(f"{API_URL}/settings/delivery-dates")
+            resp = requests.get(f"{API_URL}/settings/allowed_dates")
             if resp.status_code == 200:
-                data = resp.json()
-                self.allowed_dates = data.get("dates", [])
+                self.allowed_dates = resp.json()
             else:
                 self.allowed_dates = []
         except Exception as e:
@@ -84,8 +83,8 @@ class ProduceApp(App):
 
     def save_allowed_dates_to_backend(self):
         try:
-            resp = requests.post(
-                f"{API_URL}/settings/delivery-dates",
+            resp = requests.put(
+                f"{API_URL}/settings/allowed_dates",
                 json={"dates": self.allowed_dates}
             )
             if resp.status_code != 200:
@@ -115,7 +114,7 @@ class ProduceApp(App):
 
     def load_all_orders_from_backend(self):
         try:
-            resp = requests.get(f"{API_URL}/orders/all")
+            resp = requests.get(f"{API_URL}/orders")
             if resp.status_code == 200:
                 self.all_orders = resp.json()
             else:
@@ -958,7 +957,7 @@ class ProduceApp(App):
         if not self.current_store:
             store_orders = []
         else:
-            store_orders = self.load_store_orders_from_backend(self.current_store["id"])
+            store_orders = self.load_store_orders_from_backend(self.current_store["store_name"])
 
         if not store_orders:
             grid.add_widget(Label(
