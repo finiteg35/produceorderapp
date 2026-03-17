@@ -20,6 +20,7 @@ from schemas import (
     OrderOut,
     AllowedDatesUpdate,
     StoreOut,
+    StoreCreate,
     LoginRequest,
     StoreLoginResponse,
     OrderSubmitItem,
@@ -179,6 +180,17 @@ def list_stores(db: Session = Depends(get_db)):
     return stores
 
 
+@app.post("/stores", response_model=StoreOut, status_code=201)
+def create_store(store: StoreCreate, db: Session = Depends(get_db)):
+    logger.info("POST /stores store_name=%s username=%s", store.store_name, store.username)
+    existing = crud.get_store_by_username(db, store.username)
+    if existing:
+        raise HTTPException(status_code=409, detail="Username already exists")
+    new_store = crud.create_store(db, store)
+    logger.info("Created store id=%d name=%s", new_store.id, new_store.store_name)
+    return new_store
+
+
 @app.post("/stores/reset-password/{store_id}")
 def reset_store_password(store_id: int, db: Session = Depends(get_db)):
     logger.info("POST /stores/reset-password/%d", store_id)
@@ -210,6 +222,13 @@ def admin_login(body: LoginRequest):
     if not (user_ok and pass_ok):
         raise HTTPException(status_code=401, detail="Invalid admin credentials")
     return {"message": "Admin login successful"}
+
+
+@app.get("/auth/validate")
+def validate_username(username: str, db: Session = Depends(get_db)):
+    logger.info("GET /auth/validate username=%s", username)
+    store = crud.get_store_by_username(db, username)
+    return {"exists": store is not None}
 
 
 # ---------- ORDERS SUBMIT ----------

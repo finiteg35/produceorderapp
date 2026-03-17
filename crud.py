@@ -2,7 +2,7 @@
 from typing import List, Optional
 from sqlalchemy.orm import Session
 from models import Inventory, Order, Setting, Store
-from schemas import InventoryCreate, InventoryUpdate, OrderCreate, AllowedDatesUpdate
+from schemas import InventoryCreate, InventoryUpdate, OrderCreate, AllowedDatesUpdate, StoreCreate
 
 
 # ---------- INVENTORY ----------
@@ -119,6 +119,18 @@ def get_store_by_id(db: Session, store_id: int) -> Optional[Store]:
 
 def get_store_by_username(db: Session, username: str) -> Optional[Store]:
     return db.query(Store).filter(Store.username == username).first()
+
+
+def create_store(db: Session, store: StoreCreate) -> Store:
+    db_store = Store(
+        store_name=store.store_name,
+        username=store.username,
+        password=store.password,
+    )
+    db.add(db_store)
+    db.commit()
+    db.refresh(db_store)
+    return db_store
 
 
 def reset_store_password(db: Session, store_id: int, new_password: str) -> Optional[Store]:
