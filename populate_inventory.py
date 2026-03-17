@@ -28,6 +28,10 @@ inventory_items = [
     # Eggs
     {"category": "Eggs", "item": "Loose Case - 15 dozen", "qty": 40},
     {"category": "Eggs", "item": "Retail Cartons Case - 15 dozen", "qty": 35},
+    # Beets
+    {"category": "Beets", "item": "Red - 20# bags", "qty": 40},
+    {"category": "Beets", "item": "Candy Striped - 20# bags", "qty": 40},
+    {"category": "Beets", "item": "gold - 20# bags", "qty": 40},
 ]
 
 for inv in inventory_items:
