@@ -1,0 +1,162 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard – {{ store_name }}{% endblock %}
+
+{% block content %}
+<div class="dashboard-wrapper">
+
+  <!-- Store header -->
+  <div class="store-header">
+    <div class="store-info">
+      <div class="store-avatar">🏪</div>
+      <div>
+        <h1 class="store-name">{{ store_name }}</h1>
+        <p class="store-sub">Store Dashboard</p>
+      </div>
+    </div>
+    <div class="cart-badge-wrapper">
+      <button class="btn btn-cart" id="cart-toggle-btn">
+        🛒 Cart
+        <span class="cart-badge" id="cart-badge">{{ cart_total }}</span>
+      </button>
+    </div>
+  </div>
+
+  <div class="dashboard-body">
+
+    <!-- Inventory panel -->
+    <section class="inventory-panel" id="inventory-panel">
+      <h2 class="panel-title">📦 Browse Inventory</h2>
+
+      {% if not categories %}
+        <div class="empty-state">No inventory items available right now.</div>
+      {% else %}
+        {% for category, items in categories.items() %}
+        <div class="category-section">
+          <div class="category-header" data-category="{{ category }}">
+            <span class="category-icon">🥬</span>
+            <span class="category-name">{{ category }}</span>
+            <span class="category-chevron">▼</span>
+          </div>
+          <div class="category-items" id="cat-{{ category | replace(' ', '_') }}">
+            {% for it in items %}
+            <div class="item-row" data-category="{{ it.category }}" data-item="{{ it.item }}">
+              <div class="item-info">
+                <span class="item-name">{{ it.item }}</span>
+                <span class="item-stock">{{ it.qty }} in stock</span>
+              </div>
+              <div class="item-controls">
+                <input
+                  type="number"
+                  class="qty-input"
+                  id="qty-{{ it.category | replace(' ', '_') }}-{{ it.item | replace(' ', '_') }}"
+                  min="1"
+                  max="{{ it.qty }}"
+                  value="1"
+                  aria-label="Quantity for {{ it.item }}"
+                />
+                <button
+                  class="btn btn-add"
+                  data-category="{{ it.category }}"
+                  data-item="{{ it.item }}"
+                  data-qtyid="qty-{{ it.category | replace(' ', '_') }}-{{ it.item | replace(' ', '_') }}"
+                >
+                  Add
+                </button>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+        {% endfor %}
+      {% endif %}
+    </section>
+
+    <!-- Cart panel -->
+    <aside class="cart-panel" id="cart-panel">
+      <div class="cart-header">
+        <h2 class="panel-title">🛒 Your Cart</h2>
+        <button class="btn btn-sm btn-outline" id="cart-close-btn" title="Close cart">✕</button>
+      </div>
+
+      <div class="cart-items" id="cart-items">
+        {% if cart %}
+          {% for entry in cart %}
+          <div class="cart-item" data-category="{{ entry.category }}" data-item="{{ entry.item }}" id="cart-entry-{{ loop.index }}">
+            <div class="cart-item-info">
+              <span class="cart-item-name">{{ entry.item }}</span>
+              <span class="cart-item-cat">{{ entry.category }}</span>
+            </div>
+            <div class="cart-item-controls">
+              <span class="cart-item-qty">{{ entry.qty }}</span>
+              <button class="btn-icon remove-btn"
+                      data-category="{{ entry.category }}"
+                      data-item="{{ entry.item }}"
+                      title="Remove">🗑</button>
+            </div>
+          </div>
+          {% endfor %}
+        {% else %}
+          <div class="cart-empty" id="cart-empty">
+            <span>Your cart is empty.</span><br />
+            <span class="cart-empty-hint">Add items from the inventory.</span>
+          </div>
+        {% endif %}
+      </div>
+
+      <div class="cart-footer">
+        <div class="cart-summary">
+          <span>Total items:</span>
+          <span id="cart-total-display">{{ cart_total }}</span>
+        </div>
+
+        <div class="form-group">
+          <label for="delivery-date" class="form-label">Delivery Date</label>
+          <select id="delivery-date" class="form-input form-select">
+            <option value="">-- Select a date --</option>
+            {% for d in allowed_dates %}
+            <option value="{{ d }}">{{ d }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <button class="btn btn-primary btn-full" id="submit-order-btn">
+          ✅ Submit Order
+        </button>
+        <button class="btn btn-outline btn-full mt-sm" id="clear-cart-btn">
+          🗑 Clear Cart
+        </button>
+      </div>
+    </aside>
+  </div><!-- /.dashboard-body -->
+
+</div><!-- /.dashboard-wrapper -->
+
+<!-- Order success modal -->
+<div class="modal-overlay hidden" id="success-modal">
+  <div class="modal">
+    <div class="modal-icon">✅</div>
+    <h2>Order Submitted!</h2>
+    <p id="success-message">Your order has been placed successfully.</p>
+    <button class="btn btn-primary" id="modal-continue-btn">Continue Shopping</button>
+    <a href="{{ url_for('history') }}" class="btn btn-outline mt-sm">View Order History</a>
+  </div>
+</div>
+
+<!-- Error modal -->
+<div class="modal-overlay hidden" id="error-modal">
+  <div class="modal">
+    <div class="modal-icon">❌</div>
+    <h2>Error</h2>
+    <p id="error-message">Something went wrong.</p>
+    <button class="btn btn-primary" id="modal-error-ok-btn">OK</button>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  // Pass server-side cart to JS
+  window.__initialCart = {{ cart | tojson }};
+</script>
+{% endblock %}

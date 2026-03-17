@@ -116,8 +116,10 @@ pip install -r requirements.txt
 The start command is:
 
 ```bash
-uvicorn main:app --host 0.0.0.0 --port $PORT
+bash start.sh
 ```
+
+`start.sh` expands the `PORT` environment variable that Render injects at runtime and starts Uvicorn on the correct port.
 
 ## Project Structure
 
@@ -128,6 +130,7 @@ produceorderapp/
 ├── models.py        # ORM models (Inventory, Order, Setting)
 ├── schemas.py       # Pydantic schemas for request/response validation
 ├── crud.py          # Database CRUD operations
+├── start.sh         # Startup script for Render (expands $PORT)
 ├── render.yaml      # Render deployment configuration
 ├── requirements.txt # Python dependencies
 └── README.md        # This file

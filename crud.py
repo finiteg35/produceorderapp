@@ -1,8 +1,8 @@
 # crud.py
 from typing import List, Optional
 from sqlalchemy.orm import Session
-from models import Inventory, Order, Setting
-from schemas import InventoryCreate, InventoryUpdate, OrderCreate, AllowedDatesUpdate
+from models import Inventory, Order, Setting, Store
+from schemas import InventoryCreate, InventoryUpdate, OrderCreate, AllowedDatesUpdate, StoreCreate
 
 
 # ---------- INVENTORY ----------
@@ -105,3 +105,39 @@ def set_allowed_dates(db: Session, dates: List[str]) -> List[str]:
         setting.value = value
     db.commit()
     return dates
+
+
+# ---------- STORES ----------
+
+def get_stores(db: Session) -> List[Store]:
+    return db.query(Store).order_by(Store.store_name).all()
+
+
+def get_store_by_id(db: Session, store_id: int) -> Optional[Store]:
+    return db.query(Store).filter(Store.id == store_id).first()
+
+
+def get_store_by_username(db: Session, username: str) -> Optional[Store]:
+    return db.query(Store).filter(Store.username == username).first()
+
+
+def create_store(db: Session, store: StoreCreate) -> Store:
+    db_store = Store(
+        store_name=store.store_name,
+        username=store.username,
+        password=store.password,
+    )
+    db.add(db_store)
+    db.commit()
+    db.refresh(db_store)
+    return db_store
+
+
+def reset_store_password(db: Session, store_id: int, new_password: str) -> Optional[Store]:
+    store = get_store_by_id(db, store_id)
+    if not store:
+        return None
+    store.password = new_password
+    db.commit()
+    db.refresh(store)
+    return store

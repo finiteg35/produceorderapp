@@ -72,10 +72,9 @@ class ProduceApp(App):
 
     def load_allowed_dates_from_backend(self):
         try:
-            resp = requests.get(f"{API_URL}/settings/delivery-dates")
+            resp = requests.get(f"{API_URL}/settings/allowed_dates")
             if resp.status_code == 200:
-                data = resp.json()
-                self.allowed_dates = data.get("dates", [])
+                self.allowed_dates = resp.json()
             else:
                 self.allowed_dates = []
         except Exception as e:
@@ -84,8 +83,8 @@ class ProduceApp(App):
 
     def save_allowed_dates_to_backend(self):
         try:
-            resp = requests.post(
-                f"{API_URL}/settings/delivery-dates",
+            resp = requests.put(
+                f"{API_URL}/settings/allowed_dates",
                 json={"dates": self.allowed_dates}
             )
             if resp.status_code != 200:
@@ -115,7 +114,7 @@ class ProduceApp(App):
 
     def load_all_orders_from_backend(self):
         try:
-            resp = requests.get(f"{API_URL}/orders/all")
+            resp = requests.get(f"{API_URL}/orders")
             if resp.status_code == 200:
                 self.all_orders = resp.json()
             else:
@@ -665,22 +664,47 @@ class ProduceApp(App):
         store_filter = TextInput(
             hint_text="Filter by store",
             multiline=False,
-            font_size=18
+            font_size=18,
+            size_hint_x=0.22
         )
         date_filter = TextInput(
             hint_text="Filter by date (YYYY-MM-DD)",
             multiline=False,
-            font_size=18
+            font_size=18,
+            size_hint_x=0.25
         )
         item_filter = TextInput(
             hint_text="Search item",
             multiline=False,
-            font_size=18
+            font_size=18,
+            size_hint_x=0.22
+        )
+
+        search_btn = Button(
+            text="Search",
+            font_size=18,
+            size_hint_x=0.16,
+            background_normal='',
+            background_color=BTN_GREEN,
+            color=(1, 1, 1, 1),
+            border=(10, 10, 10, 10)
+        )
+
+        clear_btn = Button(
+            text="Clear",
+            font_size=18,
+            size_hint_x=0.15,
+            background_normal='',
+            background_color=BTN_YELLOW,
+            color=(0.2, 0.2, 0.2, 1),
+            border=(10, 10, 10, 10)
         )
 
         filter_row.add_widget(store_filter)
         filter_row.add_widget(date_filter)
         filter_row.add_widget(item_filter)
+        filter_row.add_widget(search_btn)
+        filter_row.add_widget(clear_btn)
 
         layout.add_widget(filter_row)
 
@@ -736,9 +760,15 @@ class ProduceApp(App):
                 lbl.bind(size=lambda instance, value: setattr(instance, 'text_size', value))
                 grid.add_widget(lbl)
 
-        store_filter.bind(text=refresh_orders)
-        date_filter.bind(text=refresh_orders)
-        item_filter.bind(text=refresh_orders)
+        search_btn.bind(on_press=refresh_orders)
+
+        def clear_filters(*args):
+            store_filter.text = ''
+            date_filter.text = ''
+            item_filter.text = ''
+            refresh_orders()
+
+        clear_btn.bind(on_press=clear_filters)
 
         refresh_orders()
 
@@ -958,7 +988,7 @@ class ProduceApp(App):
         if not self.current_store:
             store_orders = []
         else:
-            store_orders = self.load_store_orders_from_backend(self.current_store["id"])
+            store_orders = self.load_store_orders_from_backend(self.current_store["store_name"])
 
         if not store_orders:
             grid.add_widget(Label(
