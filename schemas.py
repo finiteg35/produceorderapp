@@ -1,6 +1,6 @@
 # schemas.py
 from typing import Optional, List
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class InventoryBase(BaseModel):
@@ -56,6 +56,12 @@ class SettingOut(SettingBase):
 
 class AllowedDatesUpdate(BaseModel):
     dates: List[str]
+
+
+class StoreCreate(BaseModel):
+    store_name: str = Field(..., min_length=1, max_length=100)
+    username: str = Field(..., min_length=1, max_length=50)
+    password: str = Field(..., min_length=6, max_length=128)
 
 
 class StoreOut(BaseModel):
