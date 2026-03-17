@@ -57,11 +57,27 @@ def login_required(f):
     return decorated
 
 
+def _extract_detail(resp) -> str:
+    """Return the 'detail' field from a JSON error response, or empty string."""
+    try:
+        return resp.json().get("detail", "")
+    except ValueError:
+        return ""
+
+
 def _api(method: str, path: str, **kwargs):
     """Make an HTTP request to the FastAPI backend and return the response."""
     url = f"{API_URL}{path}"
+    logger.info("Backend request: %s %s", method, url)
     try:
         resp = requests.request(method, url, timeout=15, **kwargs)
+        content_type = resp.headers.get("Content-Type", "")
+        logger.info(
+            "Backend response: status=%s content-type=%s body=%.500s",
+            resp.status_code,
+            content_type,
+            resp.text,
+        )
         return resp
     except requests.exceptions.RequestException as exc:
         logger.error("Backend request failed: %s", exc)
@@ -92,20 +108,37 @@ def login():
         if not username or not password:
             error = "Please enter both username and password."
         else:
+            logger.info("Store login attempt received")
             resp = _api("POST", "/auth/store-login",
                         json={"username": username, "password": password})
             if resp is None:
                 error = "Could not reach the server. Please try again later."
             elif resp.status_code == 200:
-                data = resp.json()
-                session["store_id"] = data["store_id"]
-                session["store_name"] = data["store_name"]
-                logger.info("Store '%s' logged in", data["store_name"])
-                return redirect(url_for("dashboard"))
+                content_type = resp.headers.get("Content-Type", "")
+                if "application/json" not in content_type:
+                    logger.error(
+                        "Unexpected content-type from backend: %s", content_type
+                    )
+                    error = "Unexpected response from server. Please try again later."
+                else:
+                    try:
+                        data = resp.json()
+                        session["store_id"] = data["store_id"]
+                        session["store_name"] = data["store_name"]
+                        logger.info("Store '%s' logged in", data["store_name"])
+                        return redirect(url_for("dashboard"))
+                    except ValueError as exc:
+                        logger.error("Failed to decode login JSON response: %s", exc)
+                        error = "Unexpected response from server. Please try again later."
+                    except KeyError as exc:
+                        logger.error("Missing expected field in login response: %s", exc)
+                        error = "Unexpected response from server. Please try again later."
             elif resp.status_code == 401:
-                error = "Invalid username or password."
+                detail = _extract_detail(resp)
+                error = detail if detail else "Invalid username or password."
             else:
-                error = "Login failed. Please try again."
+                detail = _extract_detail(resp)
+                error = detail if detail else "Login failed. Please try again."
 
     return render_template("login.html", error=error)
 
