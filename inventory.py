@@ -1,7 +1,10 @@
+import os
+import time
 import requests
 from requests.exceptions import RequestException
 
-API_URL = "https://produce-backend.onrender.com"
+PORT = os.environ.get("PORT", "8000")
+API_URL = os.environ.get("API_URL", f"http://localhost:{PORT}")
 
 inventory_items = [
     # Potatoes
@@ -33,6 +36,24 @@ inventory_items = [
     {"category": "Beets", "item": "Candy Striped - 20# bags", "qty": 40},
     {"category": "Beets", "item": "gold - 20# bags", "qty": 40},
 ]
+
+# Wait for the API to be ready before posting inventory items
+max_retries = 10
+print(f"⏳ Waiting for API at {API_URL}...")
+for attempt in range(max_retries):
+    try:
+        response = requests.get(f"{API_URL}/", timeout=5)
+        if response.status_code == 200:
+            print("✅ API is ready")
+            break
+    except RequestException:
+        pass
+    if attempt < max_retries - 1:
+        print(f"⏳ API not ready yet, retrying... (attempt {attempt + 1}/{max_retries})")
+        time.sleep(2)
+    else:
+        print("❌ API did not become ready in time")
+        raise SystemExit(1)
 
 for inv in inventory_items:
     try:
