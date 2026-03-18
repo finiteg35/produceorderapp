@@ -168,7 +168,11 @@ def dashboard():
     dates_resp = _api("GET", "/settings/allowed_dates")
     allowed_dates = []
     if dates_resp and dates_resp.status_code == 200:
-        allowed_dates = dates_resp.json()
+        data = dates_resp.json()
+        if isinstance(data, list):
+            allowed_dates = data
+        elif isinstance(data, dict):
+            allowed_dates = data.get("dates", data.get("allowed_dates", []))
 
     cart = session.get("cart", [])
     cart_total = sum(int(i.get("qty", 0)) for i in cart)

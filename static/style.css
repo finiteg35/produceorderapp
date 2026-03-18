@@ -1,6 +1,6 @@
 /* =============================================================================
    style.css – Produce Order App Web Interface
-   Color scheme: Green (#2e7d32 / #4caf50) + Yellow (#f9a825 / #fdd835)
+   Color scheme: Green (#2e7d32 / #4caf50) + Blue (#1976d2 / #42a5f5)
    Mobile-first responsive design
    ============================================================================= */
 
@@ -12,10 +12,10 @@
   --green:        #388e3c;
   --green-light:  #4caf50;
   --green-pale:   #e8f5e9;
-  --yellow-dark:  #f57f17;
-  --yellow:       #f9a825;
-  --yellow-light: #fdd835;
-  --yellow-pale:  #fffde7;
+  --blue-dark:    #1565c0;
+  --blue:         #1976d2;
+  --blue-light:   #42a5f5;
+  --blue-pale:    #e3f2fd;
   --text:         #212121;
   --text-muted:   #616161;
   --border:       #e0e0e0;
@@ -93,7 +93,7 @@ img { max-width: 100%; }
 }
 
 .nav-store {
-  color: var(--yellow-light);
+  color: var(--blue-light);
   font-weight: 600;
   font-size: 0.9rem;
   padding: 0 0.5rem;
@@ -173,22 +173,22 @@ img { max-width: 100%; }
 .btn-sm { padding: 0.3rem 0.6rem; font-size: 0.8rem; }
 
 .btn-add {
-  background: var(--yellow);
-  color: var(--text);
+  background: var(--blue);
+  color: #fff;
   padding: 0.4rem 0.8rem;
   font-size: 0.85rem;
 }
-.btn-add:hover { background: var(--yellow-dark); color: #fff; }
+.btn-add:hover { background: var(--blue-dark); color: #fff; }
 
 .btn-cart {
-  background: var(--yellow);
-  color: var(--text);
+  background: var(--blue);
+  color: #fff;
   font-weight: 700;
   font-size: 1rem;
   position: relative;
   padding: 0.6rem 1.2rem;
 }
-.btn-cart:hover { background: var(--yellow-dark); color: #fff; }
+.btn-cart:hover { background: var(--blue-dark); color: #fff; }
 
 .btn-icon {
   background: none;
@@ -455,7 +455,7 @@ img { max-width: 100%; }
   justify-content: space-between;
   padding: 1rem;
   border-bottom: 1px solid var(--border);
-  background: var(--yellow-pale);
+  background: var(--blue-pale);
 }
 
 .cart-items {
@@ -473,7 +473,7 @@ img { max-width: 100%; }
   gap: 0.5rem;
   transition: background var(--transition);
 }
-.cart-item:hover { background: var(--yellow-pale); }
+.cart-item:hover { background: var(--blue-pale); }
 
 .cart-item-info { flex: 1; min-width: 0; }
 .cart-item-name { font-weight: 600; font-size: 0.9rem; display: block; }
