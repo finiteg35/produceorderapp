@@ -170,6 +170,14 @@ def update_allowed_dates(body: AllowedDatesUpdate, db: Session = Depends(get_db)
     return crud.set_allowed_dates(db, body.dates)
 
 
+@app.post("/settings/allowed_dates/generate-tomorrow-week", response_model=List[str])
+def generate_allowed_dates(db: Session = Depends(get_db)):
+    logger.info("POST /settings/allowed_dates/generate-tomorrow-week")
+    dates = crud.generate_allowed_dates_tomorrow_week(db)
+    logger.info("Generated allowed dates: %s", dates)
+    return dates
+
+
 # ---------- STORES ----------
 
 @app.get("/stores/", response_model=List[StoreOut])

@@ -1,4 +1,5 @@
 # crud.py
+from datetime import datetime, timedelta
 from typing import List, Optional
 from sqlalchemy.orm import Session
 from models import Inventory, Order, Setting, Store
@@ -96,6 +97,23 @@ def get_allowed_dates(db: Session) -> List[str]:
 
 
 def set_allowed_dates(db: Session, dates: List[str]) -> List[str]:
+    value = "|".join(dates)
+    setting = db.query(Setting).filter(Setting.key == ALLOWED_DATES_KEY).first()
+    if not setting:
+        setting = Setting(key=ALLOWED_DATES_KEY, value=value)
+        db.add(setting)
+    else:
+        setting.value = value
+    db.commit()
+    return dates
+
+
+def generate_allowed_dates_tomorrow_week(db: Session) -> List[str]:
+    tomorrow = datetime.now() + timedelta(days=1)
+    dates = [
+        (tomorrow + timedelta(days=i)).strftime("%B %d, %Y")
+        for i in range(7)
+    ]
     value = "|".join(dates)
     setting = db.query(Setting).filter(Setting.key == ALLOWED_DATES_KEY).first()
     if not setting:
