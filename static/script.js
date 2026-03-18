@@ -191,6 +191,32 @@ function showAddedFeedback(qtyInputId) {
   }, 1200);
 }
 
+/* ---- Pre-select tomorrow's delivery date ---- */
+function setDefaultDeliveryDate() {
+  const dateSelect = $('#delivery-date');
+  if (!dateSelect) return;
+
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+
+  const months = [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December',
+  ];
+  const month = months[tomorrow.getMonth()];
+  const day = String(tomorrow.getDate()).padStart(2, '0');
+  const year = tomorrow.getFullYear();
+  const tomorrowStr = `${month} ${day}, ${year}`;
+
+  const options = dateSelect.options;
+  for (let i = 0; i < options.length; i++) {
+    if (options[i].value === tomorrowStr) {
+      dateSelect.value = tomorrowStr;
+      break;
+    }
+  }
+}
+
 /* ---- Category collapsing ---- */
 function initCategories() {
   $$('.category-header').forEach((header) => {
@@ -245,6 +271,7 @@ document.addEventListener('DOMContentLoaded', function () {
   initCategories();
   initCartToggle();
   initEventDelegation();
+  setDefaultDeliveryDate();
 
   // Ensure cart badge is accurate on page load
   const badge = $('#cart-badge');
