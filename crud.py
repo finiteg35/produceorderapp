@@ -84,6 +84,17 @@ def get_store_orders(db: Session, store_name: str) -> List[Order]:
     )
 
 
+def delete_order(db: Session, order_id: int) -> Optional[Order]:
+    db_order = db.query(Order).filter(Order.id == order_id).first()
+    if not db_order:
+        return None
+    db.delete(db_order)
+    db.flush()
+    db.expunge(db_order)
+    db.commit()
+    return db_order
+
+
 # ---------- SETTINGS (ALLOWED DATES) ----------
 
 ALLOWED_DATES_KEY = "allowed_dates"
