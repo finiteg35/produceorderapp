@@ -156,6 +156,16 @@ def list_store_orders(store_name: str, db: Session = Depends(get_db)):
     return orders
 
 
+@app.delete("/orders/{order_id}", response_model=OrderOut)
+def delete_order(order_id: int, db: Session = Depends(get_db)):
+    logger.info("DELETE /orders/%d", order_id)
+    deleted = crud.delete_order(db, order_id)
+    if not deleted:
+        raise HTTPException(status_code=404, detail="Order not found")
+    logger.info("Deleted order id=%d", order_id)
+    return deleted
+
+
 # ---------- SETTINGS / ALLOWED DATES ----------
 
 @app.get("/settings/allowed_dates", response_model=List[str])
