@@ -42,6 +42,28 @@ def update_inventory_qty(db: Session, category: str, item: str, qty: int) -> Opt
     return db_item
 
 
+def delete_inventory_item(db: Session, category: str, item: str) -> Optional[Inventory]:
+    db_item = get_inventory_item(db, category, item)
+    if not db_item:
+        return None
+    db.delete(db_item)
+    db.flush()
+    db.expunge(db_item)
+    db.commit()
+    return db_item
+
+
+def delete_inventory_category(db: Session, category: str) -> List[Inventory]:
+    items = db.query(Inventory).filter(Inventory.category == category).all()
+    for db_item in items:
+        db.delete(db_item)
+    db.flush()
+    for db_item in items:
+        db.expunge(db_item)
+    db.commit()
+    return items
+
+
 # ---------- ORDERS ----------
 
 def create_order(db: Session, order: OrderCreate) -> Order:

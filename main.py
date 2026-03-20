@@ -124,6 +124,26 @@ def update_inventory(
     return updated
 
 
+@app.delete("/inventory/category/{category}", response_model=List[InventoryOut])
+def delete_inventory_category(category: str, db: Session = Depends(get_db)):
+    logger.info("DELETE /inventory/category/%s", category)
+    deleted = crud.delete_inventory_category(db, category)
+    if not deleted:
+        raise HTTPException(status_code=404, detail="Category not found or already empty")
+    logger.info("Deleted %d items from category %s", len(deleted), category)
+    return deleted
+
+
+@app.delete("/inventory/{category}/{item}", response_model=InventoryOut)
+def delete_inventory_item(category: str, item: str, db: Session = Depends(get_db)):
+    logger.info("DELETE /inventory/%s/%s", category, item)
+    deleted = crud.delete_inventory_item(db, category, item)
+    if not deleted:
+        raise HTTPException(status_code=404, detail="Item not found")
+    logger.info("Deleted item %s from category %s", item, category)
+    return deleted
+
+
 # ---------- ORDERS ----------
 
 @app.post("/orders", response_model=OrderOut)
