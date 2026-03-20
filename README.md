@@ -82,6 +82,8 @@ A FastAPI backend for managing produce orders, inventory, and delivery settings.
 | `GET` | `/inventory/item` | Get a single item by `category` and `item` query params |
 | `POST` | `/inventory` | Create a new inventory item |
 | `PUT` | `/inventory` | Update the quantity of an existing item |
+| `DELETE` | `/inventory/category/{category}` | Delete all items in a specific category |
+| `DELETE` | `/inventory/{category}/{item}` | Delete a specific inventory item |
 | `POST` | `/orders` | Submit a new order |
 | `GET` | `/orders` | List orders (filterable by `store_name`, `date_prefix`, `item_search`) |
 | `GET` | `/orders/store/{store_name}` | List all orders for a specific store |
