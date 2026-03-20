@@ -49,7 +49,7 @@ img { max-width: 100%; }
 
 /* ---- Navbar ---- */
 .navbar {
-  background: var(--green-dark);
+  background: var(--blue-dark);
   color: #fff;
   padding: 0 1rem;
   height: 56px;
@@ -116,7 +116,7 @@ img { max-width: 100%; }
 
 /* ---- Footer ---- */
 .footer {
-  background: var(--green-dark);
+  background: var(--blue-dark);
   color: rgba(255,255,255,0.7);
   text-align: center;
   padding: 0.75rem;
@@ -202,7 +202,7 @@ img { max-width: 100%; }
 
 /* ---- Cart badge ---- */
 .cart-badge {
-  background: var(--green-dark);
+  background: var(--blue-dark);
   color: #fff;
   border-radius: 50%;
   width: 22px;
@@ -289,7 +289,7 @@ img { max-width: 100%; }
 
 .login-header h1 {
   font-size: 1.8rem;
-  color: var(--green-dark);
+  color: var(--blue-dark);
 }
 
 .login-subtitle {
@@ -308,7 +308,7 @@ img { max-width: 100%; }
 .dashboard-wrapper { width: 100%; }
 
 .store-header {
-  background: linear-gradient(135deg, var(--green-dark), var(--green));
+  background: linear-gradient(135deg, var(--blue-dark), var(--blue));
   color: #fff;
   border-radius: 12px;
   padding: 1.25rem 1.5rem;
@@ -364,7 +364,7 @@ img { max-width: 100%; }
   font-size: 1.1rem;
   font-weight: 700;
   margin-bottom: 1rem;
-  color: var(--green-dark);
+  color: var(--blue-dark);
 }
 
 .category-section {
@@ -380,17 +380,17 @@ img { max-width: 100%; }
   align-items: center;
   gap: 0.5rem;
   padding: 0.85rem 1rem;
-  background: var(--green-pale);
+  background: var(--blue-pale);
   cursor: pointer;
   user-select: none;
   transition: background var(--transition);
 }
-.category-header:hover { background: #dcedc8; }
+.category-header:hover { background: #e1f5fe; }
 
 .category-name {
   font-weight: 700;
   font-size: 0.95rem;
-  color: var(--green-dark);
+  color: var(--blue-dark);
   flex: 1;
 }
 
@@ -485,8 +485,8 @@ img { max-width: 100%; }
   gap: 0.4rem;
 }
 .cart-item-qty {
-  background: var(--green-pale);
-  color: var(--green-dark);
+  background: var(--blue-pale);
+  color: var(--blue-dark);
   font-weight: 700;
   border-radius: 4px;
   padding: 0.1rem 0.45rem;
@@ -516,7 +516,7 @@ img { max-width: 100%; }
   justify-content: space-between;
   font-weight: 600;
   margin-bottom: 0.75rem;
-  color: var(--green-dark);
+  color: var(--blue-dark);
 }
 
 /* ---- Cart toggle for mobile ---- */
@@ -578,8 +578,8 @@ img { max-width: 100%; }
   border-bottom: 1px solid var(--border);
 }
 .history-table th {
-  background: var(--green-pale);
-  color: var(--green-dark);
+  background: var(--blue-pale);
+  color: var(--blue-dark);
   font-weight: 700;
   font-size: 0.8rem;
   text-transform: uppercase;
@@ -589,8 +589,8 @@ img { max-width: 100%; }
 .history-table tr:hover td { background: #fafafa; }
 
 .tag {
-  background: var(--green-pale);
-  color: var(--green-dark);
+  background: var(--blue-pale);
+  color: var(--blue-dark);
   border-radius: 4px;
   padding: 0.1rem 0.4rem;
   font-size: 0.78rem;
