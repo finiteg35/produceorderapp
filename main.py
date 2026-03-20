@@ -104,10 +104,7 @@ def get_inventory_item(
 @app.post("/inventory", response_model=InventoryOut)
 def create_inventory_item(inv: InventoryCreate, db: Session = Depends(get_db)):
     logger.info("POST /inventory category=%s item=%s", inv.category, inv.item)
-    db_item = crud.get_inventory_item(db, inv.category, inv.item)
-    if db_item:
-        raise HTTPException(status_code=400, detail="Item already exists")
-    return crud.create_inventory_item(db, inv)
+    return crud.upsert_inventory_item(db, inv)
 
 
 @app.put("/inventory", response_model=InventoryOut)

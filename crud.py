@@ -32,6 +32,16 @@ def create_inventory_item(db: Session, inv: InventoryCreate) -> Inventory:
     return db_item
 
 
+def upsert_inventory_item(db: Session, inv: InventoryCreate) -> Inventory:
+    db_item = get_inventory_item(db, inv.category, inv.item)
+    if db_item:
+        db_item.qty = inv.qty
+        db.commit()
+        db.refresh(db_item)
+        return db_item
+    return create_inventory_item(db, inv)
+
+
 def update_inventory_qty(db: Session, category: str, item: str, qty: int) -> Optional[Inventory]:
     db_item = get_inventory_item(db, category, item)
     if not db_item:
