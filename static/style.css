@@ -32,11 +32,12 @@ html { font-size: 16px; scroll-behavior: smooth; }
 body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   background-color: var(--bg);
-  background-image: url('https://github.com/user-attachments/assets/e0ebc16f-b476-4d09-ab65-99de2a3f0959');
+  background-image: url('https://github.com/user-attachments/assets/5b22e602-2391-4e1c-a9e1-db5c37ea13c4');
   background-size: cover;
   background-position: center;
   background-attachment: fixed;
   background-repeat: no-repeat;
+  image-rendering: high-quality;
   color: var(--text);
   min-height: 100vh;
   display: flex;
