@@ -10,8 +10,9 @@
   {% block nav %}
   <nav class="navbar">
     <div class="navbar-brand">
-      <span class="logo-icon">🥔</span>
-      <span class="logo-text">Green Meadow Farms Order Portal</span>
+      <img src="https://github.com/user-attachments/assets/f5422071-54e3-4397-be4f-dedc8ca16422"
+           alt="Green Meadow Farms"
+           class="navbar-logo" />
     </div>
     {% if session.get('store_name') %}
     <div class="navbar-links">
@@ -46,5 +47,52 @@
 
   {% block scripts %}{% endblock %}
   <script src="{{ url_for('static', filename='script.js') }}"></script>
+  {% if session.get('store_name') %}
+  <script>
+    /* ---- Auto-logout: 60 s inactivity + page-close beacon ---- */
+    (function () {
+      var TIMEOUT_MS = 60 * 1000;
+      var timer;
+
+      function resetTimer() {
+        clearTimeout(timer);
+        timer = setTimeout(function () {
+          window.location.href = '/logout';
+        }, TIMEOUT_MS);
+      }
+
+      ['mousemove', 'mousedown', 'keydown', 'touchstart', 'scroll', 'click'].forEach(function (evt) {
+        document.addEventListener(evt, resetTimer, { passive: true });
+      });
+      resetTimer();
+
+      /* Track internal navigation so we don't beacon-logout on route changes */
+      var isInternalNav = false;
+
+      document.addEventListener('click', function (e) {
+        var link = e.target.closest('a[href]');
+        if (link) {
+          var href = link.getAttribute('href');
+          if (href && !href.startsWith('http') && !href.startsWith('//') && href !== '#') {
+            isInternalNav = true;
+            /* Reset after 5 s in case navigation was cancelled or intercepted */
+            setTimeout(function () { isInternalNav = false; }, 5000);
+          }
+        }
+      });
+
+      document.addEventListener('submit', function () {
+        isInternalNav = true;
+      });
+
+      /* Send logout beacon only when the page is actually being closed */
+      window.addEventListener('pagehide', function () {
+        if (!isInternalNav) {
+          navigator.sendBeacon('/logout-beacon');
+        }
+      });
+    })();
+  </script>
+  {% endif %}
 </body>
 </html>
