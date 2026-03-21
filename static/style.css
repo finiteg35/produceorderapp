@@ -20,7 +20,7 @@
   --text-muted:   #616161;
   --border:       #e0e0e0;
   --surface:      #ffffff;
-  --bg:           #f5f5f5;
+  --bg:           #0d1b2a;
   --radius:       8px;
   --shadow:       0 2px 8px rgba(0,0,0,0.10);
   --shadow-lg:    0 4px 20px rgba(0,0,0,0.15);
@@ -49,8 +49,8 @@ img { max-width: 100%; }
 
 /* ---- Navbar ---- */
 .navbar {
-  background: var(--green-dark);
-  color: #fff;
+  background: #a5d6a7;
+  color: #1b5e20;
   padding: 0 1rem;
   height: 56px;
   display: flex;
@@ -68,7 +68,7 @@ img { max-width: 100%; }
   gap: 0.5rem;
   font-size: 1.15rem;
   font-weight: 700;
-  color: #fff;
+  color: #1b5e20;
 }
 
 .logo-icon { font-size: 1.4rem; }
@@ -80,30 +80,30 @@ img { max-width: 100%; }
 }
 
 .nav-link {
-  color: rgba(255,255,255,0.85);
+  color: rgba(27, 94, 32, 0.85);
   padding: 0.35rem 0.75rem;
   border-radius: var(--radius);
   font-size: 0.9rem;
   transition: background var(--transition);
 }
 .nav-link:hover, .nav-link.active {
-  background: rgba(255,255,255,0.15);
-  color: #fff;
+  background: rgba(27, 94, 32, 0.15);
+  color: #1b5e20;
   text-decoration: none;
 }
 
 .nav-store {
-  color: var(--green-light);
+  color: #1b5e20;
   font-weight: 600;
   font-size: 0.9rem;
   padding: 0 0.5rem;
 }
 
 .nav-logout {
-  background: rgba(255,255,255,0.12);
-  border: 1px solid rgba(255,255,255,0.25);
+  background: rgba(27, 94, 32, 0.12);
+  border: 1px solid rgba(27, 94, 32, 0.3);
 }
-.nav-logout:hover { background: rgba(255,80,80,0.3); }
+.nav-logout:hover { background: rgba(255,80,80,0.2); }
 
 /* ---- Main content ---- */
 .main-content {
@@ -116,8 +116,8 @@ img { max-width: 100%; }
 
 /* ---- Footer ---- */
 .footer {
-  background: var(--green-dark);
-  color: rgba(255,255,255,0.7);
+  background: #a5d6a7;
+  color: #1b5e20;
   text-align: center;
   padding: 0.75rem;
   font-size: 0.8rem;
@@ -308,8 +308,8 @@ img { max-width: 100%; }
 .dashboard-wrapper { width: 100%; }
 
 .store-header {
-  background: linear-gradient(135deg, var(--green-dark), var(--green));
-  color: #fff;
+  background: linear-gradient(135deg, #66bb6a, #a5d6a7);
+  color: #1b5e20;
   border-radius: 12px;
   padding: 1.25rem 1.5rem;
   display: flex;
@@ -364,7 +364,7 @@ img { max-width: 100%; }
   font-size: 1.1rem;
   font-weight: 700;
   margin-bottom: 1rem;
-  color: var(--blue-dark);
+  color: #e8f5e9;
 }
 
 .category-section {
@@ -556,8 +556,8 @@ img { max-width: 100%; }
 .history-header {
   margin-bottom: 1.5rem;
 }
-.history-header h1 { font-size: 1.6rem; margin-bottom: 0.25rem; }
-.history-sub { color: var(--text-muted); margin-bottom: 1rem; }
+.history-header h1 { font-size: 1.6rem; margin-bottom: 0.25rem; color: #e8f5e9; }
+.history-sub { color: rgba(232, 245, 233, 0.75); margin-bottom: 1rem; }
 
 .history-table-wrapper {
   background: var(--surface);

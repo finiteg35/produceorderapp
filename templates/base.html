@@ -3,15 +3,15 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>{% block title %}Produce Order App{% endblock %}</title>
+  <title>{% block title %}Green Meadow Farms Order Portal{% endblock %}</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
 </head>
 <body>
   {% block nav %}
   <nav class="navbar">
     <div class="navbar-brand">
-      <span class="logo-icon">🥦</span>
-      <span class="logo-text">Produce Order App</span>
+      <span class="logo-icon">🥔</span>
+      <span class="logo-text">Green Meadow Farms Order Portal</span>
     </div>
     {% if session.get('store_name') %}
     <div class="navbar-links">
@@ -41,7 +41,7 @@
   </main>
 
   <footer class="footer">
-    <p>&copy; 2025 Produce Order App</p>
+    <p>&copy; 2025 Green Meadow Farms</p>
   </footer>
 
   {% block scripts %}{% endblock %}

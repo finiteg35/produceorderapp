@@ -31,10 +31,17 @@
       {% if not categories %}
         <div class="empty-state">No inventory items available right now.</div>
       {% else %}
+        {% set category_icons = {
+          'apples': '🍎', 'apple': '🍎',
+          'potatoes': '🥔', 'potato': '🥔',
+          'eggs': '🥚', 'egg': '🥚',
+          'beets': '🍠', 'beet': '🍠',  {# 🍠 (sweet potato/yam) is the closest available emoji to a beet/root vegetable #}
+          'onions': '🧅', 'onion': '🧅'
+        } %}
         {% for category, items in categories.items() %}
         <div class="category-section">
           <div class="category-header" data-category="{{ category }}">
-            <span class="category-icon">🥬</span>
+            <span class="category-icon">{{ category_icons.get(category.lower(), '🥬') }}</span>
             <span class="category-name">{{ category }}</span>
             <span class="category-chevron">▼</span>
           </div>
