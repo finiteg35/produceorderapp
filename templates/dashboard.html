@@ -112,12 +112,7 @@
 
         <div class="form-group">
           <label for="delivery-date" class="form-label">Delivery Date</label>
-          <select id="delivery-date" class="form-input form-select">
-            <option value="">-- Select a date --</option>
-            {% for d in allowed_dates %}
-            <option value="{{ d }}">{{ d }}</option>
-            {% endfor %}
-          </select>
+          <input type="date" id="delivery-date" class="form-input" />
         </div>
 
         <button class="btn btn-primary btn-full" id="submit-order-btn">
@@ -158,5 +153,7 @@
 <script>
   // Pass server-side cart to JS
   window.__initialCart = {{ cart | tojson }};
+  // Pass allowed delivery dates to JS (format: "Month DD, YYYY")
+  window.__allowedDates = {{ allowed_dates | tojson }};
 </script>
 {% endblock %}

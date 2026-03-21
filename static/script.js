@@ -112,10 +112,24 @@ function submitOrder() {
     return;
   }
 
-  const dateSelect = $('#delivery-date');
-  const deliveryDate = dateSelect ? dateSelect.value : '';
-  if (!deliveryDate) {
+  const dateInput = $('#delivery-date');
+  const isoDate = dateInput ? dateInput.value : '';
+  if (!isoDate) {
     showError('Please select a delivery date before submitting.');
+    return;
+  }
+
+  // Convert ISO date back to "Month DD, YYYY" format expected by the backend
+  const deliveryDate = isoDateToMonthStr(isoDate);
+  if (!deliveryDate) {
+    showError('Please select a valid delivery date before submitting.');
+    return;
+  }
+
+  // Validate the selected date is among the allowed dates
+  const allowedDates = window.__allowedDates || [];
+  if (allowedDates.length > 0 && !allowedDates.includes(deliveryDate)) {
+    showError('Please select a valid delivery date.');
     return;
   }
 
@@ -191,30 +205,61 @@ function showAddedFeedback(qtyInputId) {
   }, 1200);
 }
 
-/* ---- Pre-select tomorrow's delivery date ---- */
-function setDefaultDeliveryDate() {
-  const dateSelect = $('#delivery-date');
-  if (!dateSelect) return;
+/* ---- Date format helpers ---- */
 
-  const tomorrow = new Date();
-  tomorrow.setDate(tomorrow.getDate() + 1);
+// Convert "March 22, 2026" → "2026-03-22" (ISO date string for input[type=date])
+function dateStrToISO(dateStr) {
+  const months = {
+    January: '01', February: '02', March: '03', April: '04',
+    May: '05', June: '06', July: '07', August: '08',
+    September: '09', October: '10', November: '11', December: '12',
+  };
+  const match = dateStr.match(/^(\w+)\s+(\d+),\s+(\d{4})$/);
+  if (!match) return '';
+  const [, month, day, year] = match;
+  return `${year}-${months[month]}-${String(day).padStart(2, '0')}`;
+}
 
+// Convert "2026-03-22" (ISO) → "March 22, 2026"
+function isoDateToMonthStr(isoDate) {
   const months = [
     'January', 'February', 'March', 'April', 'May', 'June',
     'July', 'August', 'September', 'October', 'November', 'December',
   ];
-  const month = months[tomorrow.getMonth()];
-  const day = String(tomorrow.getDate()).padStart(2, '0');
-  const year = tomorrow.getFullYear();
-  const tomorrowStr = `${month} ${day}, ${year}`;
+  const match = isoDate.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) return '';
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  if (month < 1 || month > 12) return '';
+  return `${months[month - 1]} ${String(day).padStart(2, '0')}, ${year}`;
+}
 
-  const options = dateSelect.options;
-  for (let i = 0; i < options.length; i++) {
-    if (options[i].value === tomorrowStr) {
-      dateSelect.value = tomorrowStr;
-      break;
-    }
-  }
+/* ---- Pre-select tomorrow's delivery date ---- */
+function setDefaultDeliveryDate() {
+  const dateInput = $('#delivery-date');
+  if (!dateInput) return;
+
+  const allowedDates = window.__allowedDates || [];
+  if (allowedDates.length === 0) return;
+
+  const isoAllowedDates = allowedDates.map(dateStrToISO).filter(Boolean);
+  if (isoAllowedDates.length === 0) return;
+
+  // Restrict selectable range to first/last allowed date
+  dateInput.min = isoAllowedDates[0];
+  dateInput.max = isoAllowedDates[isoAllowedDates.length - 1];
+
+  // Pre-select tomorrow if it is in the allowed list, otherwise use the first date
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const tomorrowISO = [
+    tomorrow.getFullYear(),
+    String(tomorrow.getMonth() + 1).padStart(2, '0'),
+    String(tomorrow.getDate()).padStart(2, '0'),
+  ].join('-');
+
+  dateInput.value = isoAllowedDates.includes(tomorrowISO) ? tomorrowISO : isoAllowedDates[0];
 }
 
 /* ---- Category collapsing ---- */
