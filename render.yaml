@@ -10,8 +10,6 @@ services:
         fromDatabase:
           name: produce-db
           property: connectionString
-      - key: PORT
-        value: 10000
 
   - type: web
     name: produce-web
@@ -24,8 +22,6 @@ services:
         value: https://produce-backend.onrender.com
       - key: FLASK_SECRET_KEY
         value: your-secret-key-here-change-in-production
-      - key: PORT
-        value: 10001
 
 databases:
   - name: produce-db
