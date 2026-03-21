@@ -249,21 +249,13 @@ function setDefaultDeliveryDate() {
   // Restrict selectable range to first/last allowed date
   dateInput.min = isoAllowedDates[0];
   dateInput.max = isoAllowedDates[isoAllowedDates.length - 1];
-
-  // Pre-select tomorrow if it is in the allowed list, otherwise use the first date
-  const tomorrow = new Date();
-  tomorrow.setDate(tomorrow.getDate() + 1);
-  const tomorrowISO = [
-    tomorrow.getFullYear(),
-    String(tomorrow.getMonth() + 1).padStart(2, '0'),
-    String(tomorrow.getDate()).padStart(2, '0'),
-  ].join('-');
-
-  dateInput.value = isoAllowedDates.includes(tomorrowISO) ? tomorrowISO : isoAllowedDates[0];
 }
 
 /* ---- Category collapsing ---- */
 function initCategories() {
+  $$('.category-section').forEach((section) => {
+    section.classList.add('collapsed');
+  });
   $$('.category-header').forEach((header) => {
     header.addEventListener('click', function () {
       const section = this.closest('.category-section');
