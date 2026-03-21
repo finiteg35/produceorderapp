@@ -149,6 +149,14 @@ def logout():
     return redirect(url_for("login"))
 
 
+@app.route("/logout-beacon", methods=["POST"])
+def logout_beacon():
+    """Endpoint called by navigator.sendBeacon() when the page/tab is closed."""
+    if "store_id" in session:
+        session.clear()
+    return "", 204
+
+
 @app.route("/dashboard")
 @login_required
 def dashboard():
