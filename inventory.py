@@ -8,33 +8,33 @@ API_URL = os.environ.get("API_URL", f"http://localhost:{PORT}")
 
 inventory_items = [
     # Potatoes
-    {"category": "Potatoes", "item": "White Chef - 50# bags", "qty": 25},
-    {"category": "Potatoes", "item": "Yellow Chef - 50# bags", "qty": 25},
-    {"category": "Potatoes", "item": "Red A - 50# bags", "qty": 20},
-    {"category": "Potatoes", "item": "Red B - 50# bags", "qty": 20},
-    {"category": "Potatoes", "item": "Russets - 50# boxes, 60 count", "qty": 15},
-    {"category": "Potatoes", "item": "Russets - 50# boxes, 70 count", "qty": 15},
-    {"category": "Potatoes", "item": "Russets - 50# boxes, 80 count", "qty": 15},
-    {"category": "Potatoes", "item": "Russets - 50# boxes, 90 count", "qty": 15},
-    {"category": "Potatoes", "item": "Russets - 50# boxes, 100 count", "qty": 15},
-    {"category": "Potatoes", "item": "Russets - 50# boxes, 120 count", "qty": 15},
+    {"category": "Potatoes", "item": "White Chef - 50# bags", "qty": 100},
+    {"category": "Potatoes", "item": "Yellow Chef - 50# bags", "qty": 100},
+    {"category": "Potatoes", "item": "Red A - 50# bags", "qty": 100},
+    {"category": "Potatoes", "item": "Red B - 50# bags", "qty": 100},
+    {"category": "Potatoes", "item": "Russets - 50# boxes, 60 count", "qty": 100},
+    {"category": "Potatoes", "item": "Russets - 50# boxes, 70 count", "qty": 100},
+    {"category": "Potatoes", "item": "Russets - 50# boxes, 80 count", "qty": 100},
+    {"category": "Potatoes", "item": "Russets - 50# boxes, 90 count", "qty": 100},
+    {"category": "Potatoes", "item": "Russets - 50# boxes, 100 count", "qty": 100},
+    {"category": "Potatoes", "item": "Russets - 50# boxes, 120 count", "qty": 100},
     # Apples
-    {"category": "Apples", "item": "Macintosh - Loose Bulk 40#", "qty": 20},
-    {"category": "Apples", "item": "Macintosh - 3# Bags in Case of 12", "qty": 30},
-    {"category": "Apples", "item": "Cortland - Loose Bulk 40#", "qty": 20},
-    {"category": "Apples", "item": "Cortland - 3# Bags in Case of 12", "qty": 30},
-    {"category": "Apples", "item": "Honeycrisp - Loose Bulk 40#", "qty": 15},
-    {"category": "Apples", "item": "Honeycrisp - 3# Bags in Case of 12", "qty": 25},
+    {"category": "Apples", "item": "Macintosh - Loose Bulk 40#", "qty": 100},
+    {"category": "Apples", "item": "Macintosh - 3# Bags in Case of 12", "qty": 100},
+    {"category": "Apples", "item": "Cortland - Loose Bulk 40#", "qty": 100},
+    {"category": "Apples", "item": "Cortland - 3# Bags in Case of 12", "qty": 100},
+    {"category": "Apples", "item": "Honeycrisp - Loose Bulk 40#", "qty": 100},
+    {"category": "Apples", "item": "Honeycrisp - 3# Bags in Case of 12", "qty": 100},
     # Onions
-    {"category": "Onions", "item": "Red - 25# bags", "qty": 30},
-    {"category": "Onions", "item": "Yellow - 25# bags", "qty": 35},
+    {"category": "Onions", "item": "Red - 25# bags", "qty": 100},
+    {"category": "Onions", "item": "Yellow - 25# bags", "qty": 100},
     # Eggs
-    {"category": "Eggs", "item": "Loose Case - 15 dozen", "qty": 40},
-    {"category": "Eggs", "item": "Retail Cartons Case - 15 dozen", "qty": 35},
+    {"category": "Eggs", "item": "Loose Case - 15 dozen", "qty": 100},
+    {"category": "Eggs", "item": "Retail Cartons Case - 15 dozen", "qty": 100},
     # Beets
-    {"category": "Beets", "item": "Red - 20# bags", "qty": 40},
-    {"category": "Beets", "item": "Candy Striped - 20# bags", "qty": 40},
-    {"category": "Beets", "item": "gold - 20# bags", "qty": 40},
+    {"category": "Beets", "item": "Red - 20# bags", "qty": 100},
+    {"category": "Beets", "item": "Candy Striped - 20# bags", "qty": 100},
+    {"category": "Beets", "item": "Gold - 20# bags", "qty": 100},
 ]
 
 # Wait for the API to be ready before posting inventory items
