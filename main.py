@@ -12,6 +12,7 @@ from sqlalchemy.orm import Session
 from database import Base, engine, get_db
 from models import Inventory, Order, Setting, Store
 import crud
+from auth_utils import verify_password
 from schemas import (
     InventoryOut,
     InventoryCreate,
@@ -241,7 +242,7 @@ def reset_store_password(store_id: int, db: Session = Depends(get_db)):
 def store_login(body: LoginRequest, db: Session = Depends(get_db)):
     logger.info("POST /auth/store-login username=%s", body.username)
     store = crud.get_store_by_username(db, body.username)
-    if not store or store.password != body.password:
+    if not store or not verify_password(body.password, store.password):
         raise HTTPException(status_code=401, detail="Invalid username or password")
     return {"store_id": store.id, "store_name": store.store_name, "email": store.email}
 
