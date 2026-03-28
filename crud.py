@@ -4,6 +4,7 @@ from typing import List, Optional
 from sqlalchemy.orm import Session
 from models import Inventory, Order, Setting, Store
 from schemas import InventoryCreate, InventoryUpdate, OrderCreate, AllowedDatesUpdate, StoreCreate
+from auth_utils import hash_password
 
 
 # ---------- INVENTORY ----------
@@ -187,7 +188,7 @@ def create_store(db: Session, store: StoreCreate) -> Store:
     db_store = Store(
         store_name=store.store_name,
         username=store.username,
-        password=store.password,
+        password=hash_password(store.password),
         email=store.email,
     )
     db.add(db_store)
@@ -200,7 +201,7 @@ def reset_store_password(db: Session, store_id: int, new_password: str) -> Optio
     store = get_store_by_id(db, store_id)
     if not store:
         return None
-    store.password = new_password
+    store.password = hash_password(new_password)
     db.commit()
     db.refresh(store)
     return store
