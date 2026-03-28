@@ -105,7 +105,7 @@ function clearCart() {
     .catch(() => showError('Could not clear cart. Please try again.'));
 }
 
-/* ---- Submit order ---- */
+/* ---- Submit order (after name is confirmed) ---- */
 function submitOrder() {
   if (cart.length === 0) {
     showError('Your cart is empty. Add items before submitting.');
@@ -133,13 +133,26 @@ function submitOrder() {
     return;
   }
 
+  // Show the name prompt modal; actual submission happens after name is confirmed
+  window.__pendingDeliveryDate = deliveryDate;
+  const nameInput = $('#ordered-by-input');
+  if (nameInput) nameInput.value = '';
+  const nameModal = $('#name-prompt-modal');
+  if (nameModal) {
+    nameModal.classList.remove('hidden');
+    if (nameInput) nameInput.focus();
+  }
+}
+
+/* ---- Perform the actual API call once the name has been collected ---- */
+function doSubmitOrder(deliveryDate, orderedBy) {
   const btn = $('#submit-order-btn');
   if (btn) { btn.disabled = true; btn.textContent = '⏳ Submitting…'; }
 
   fetch('/order/submit', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ delivery_date: deliveryDate }),
+    body: JSON.stringify({ delivery_date: deliveryDate, ordered_by: orderedBy }),
   })
     .then(handleJsonResponse)
     .then((data) => {
@@ -168,6 +181,12 @@ function closeModal() {
   if (modal) modal.classList.add('hidden');
 }
 
+function closeNamePromptModal() {
+  const modal = $('#name-prompt-modal');
+  if (modal) modal.classList.add('hidden');
+  window.__pendingDeliveryDate = null;
+}
+
 function showError(message) {
   const modal = $('#error-modal');
   const msg   = $('#error-message');
@@ -185,6 +204,7 @@ document.addEventListener('click', function (e) {
   if (e.target.classList.contains('modal-overlay')) {
     closeModal();
     closeErrorModal();
+    closeNamePromptModal();
   }
 });
 
@@ -357,4 +377,35 @@ function initEventDelegation() {
 
   const errorOkBtn = $('#modal-error-ok-btn');
   if (errorOkBtn) errorOkBtn.addEventListener('click', closeErrorModal);
+
+  // Name prompt modal buttons
+  const nameConfirmBtn = $('#name-prompt-confirm-btn');
+  if (nameConfirmBtn) {
+    nameConfirmBtn.addEventListener('click', function () {
+      const nameInput = $('#ordered-by-input');
+      const orderedBy = nameInput ? nameInput.value.trim() : '';
+      if (!orderedBy) {
+        nameInput && nameInput.focus();
+        return;
+      }
+      const deliveryDate = window.__pendingDeliveryDate;
+      if (!deliveryDate) return;
+      closeNamePromptModal();
+      doSubmitOrder(deliveryDate, orderedBy);
+    });
+  }
+
+  const nameCancelBtn = $('#name-prompt-cancel-btn');
+  if (nameCancelBtn) nameCancelBtn.addEventListener('click', closeNamePromptModal);
+
+  // Allow pressing Enter in the name input to confirm
+  const nameInput = $('#ordered-by-input');
+  if (nameInput) {
+    nameInput.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') {
+        const confirmBtn = $('#name-prompt-confirm-btn');
+        if (confirmBtn) confirmBtn.click();
+      }
+    });
+  }
 }
