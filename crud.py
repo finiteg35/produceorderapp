@@ -84,6 +84,7 @@ def create_order(db: Session, order: OrderCreate) -> Order:
         qty=order.qty,
         delivery_date=order.delivery_date,
         submitted_at=order.submitted_at,
+        ordered_by=order.ordered_by,
     )
     db.add(db_order)
     db.commit()
@@ -187,6 +188,7 @@ def create_store(db: Session, store: StoreCreate) -> Store:
         store_name=store.store_name,
         username=store.username,
         password=store.password,
+        email=store.email,
     )
     db.add(db_store)
     db.commit()

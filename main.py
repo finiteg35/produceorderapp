@@ -243,7 +243,7 @@ def store_login(body: LoginRequest, db: Session = Depends(get_db)):
     store = crud.get_store_by_username(db, body.username)
     if not store or store.password != body.password:
         raise HTTPException(status_code=401, detail="Invalid username or password")
-    return {"store_id": store.id, "store_name": store.store_name}
+    return {"store_id": store.id, "store_name": store.store_name, "email": store.email}
 
 
 @app.post("/auth/admin-login")
@@ -283,6 +283,7 @@ def submit_orders(items: List[OrderSubmitItem], db: Session = Depends(get_db)):
             qty=item.qty,
             delivery_date=item.delivery_date,
             submitted_at=item.submitted_at,
+            ordered_by=item.ordered_by,
         )
         created.append(crud.create_order(db, order_in))
     logger.info("Submitted %d orders", len(created))

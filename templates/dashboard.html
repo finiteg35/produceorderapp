@@ -134,6 +134,26 @@
 
 </div><!-- /.dashboard-wrapper -->
 
+<!-- Contact name prompt modal -->
+<div class="modal-overlay hidden" id="name-prompt-modal">
+  <div class="modal">
+    <div class="modal-icon">📝</div>
+    <h2>Who is placing this order?</h2>
+    <p>Please enter your name before submitting.</p>
+    <input
+      type="text"
+      id="ordered-by-input"
+      class="form-input"
+      placeholder="Your name"
+      maxlength="100"
+      autocomplete="name"
+      style="margin-bottom: 1rem;"
+    />
+    <button class="btn btn-primary btn-full" id="name-prompt-confirm-btn">Confirm &amp; Submit</button>
+    <button class="btn btn-outline btn-full mt-sm" id="name-prompt-cancel-btn">Cancel</button>
+  </div>
+</div>
+
 <!-- Order success modal -->
 <div class="modal-overlay hidden" id="success-modal">
   <div class="modal">

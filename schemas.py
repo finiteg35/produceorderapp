@@ -31,6 +31,7 @@ class OrderBase(BaseModel):
     qty: int
     delivery_date: str
     submitted_at: str
+    ordered_by: Optional[str] = None
 
 
 class OrderCreate(OrderBase):
@@ -62,12 +63,14 @@ class StoreCreate(BaseModel):
     store_name: str = Field(..., min_length=1, max_length=100)
     username: str = Field(..., min_length=1, max_length=50)
     password: str = Field(..., min_length=6, max_length=128)
+    email: Optional[str] = None
 
 
 class StoreOut(BaseModel):
     id: int
     store_name: str
     username: str
+    email: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -81,6 +84,7 @@ class LoginRequest(BaseModel):
 class StoreLoginResponse(BaseModel):
     store_id: int
     store_name: str
+    email: Optional[str] = None
 
 
 class OrderSubmitItem(BaseModel):
@@ -90,3 +94,4 @@ class OrderSubmitItem(BaseModel):
     qty: int
     delivery_date: str
     submitted_at: str
+    ordered_by: Optional[str] = None

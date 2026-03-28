@@ -13,7 +13,11 @@ Or with Gunicorn:
 
 import os
 import logging
+import smtplib
+import ssl
 from datetime import datetime
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
 from functools import wraps
 
 import requests
@@ -33,6 +37,15 @@ from flask import (
 # ---------------------------------------------------------------------------
 API_URL = os.environ.get("API_URL", "https://produce-backend.onrender.com")
 SECRET_KEY = os.environ.get("FLASK_SECRET_KEY", "change-me-in-production")
+
+SMTP_HOST = os.environ.get("SMTP_HOST", "")
+try:
+    SMTP_PORT = int(os.environ.get("SMTP_PORT", "587"))
+except ValueError:
+    SMTP_PORT = 587
+SMTP_USERNAME = os.environ.get("SMTP_USERNAME", "")
+SMTP_PASSWORD = os.environ.get("SMTP_PASSWORD", "")
+SMTP_FROM_EMAIL = os.environ.get("SMTP_FROM_EMAIL", SMTP_USERNAME)
 
 app = Flask(__name__)
 app.secret_key = SECRET_KEY
@@ -84,6 +97,86 @@ def _api(method: str, path: str, **kwargs):
         return None
 
 
+def _send_order_confirmation(
+    to_email: str,
+    store_name: str,
+    ordered_by: str,
+    delivery_date: str,
+    items: list,
+) -> None:
+    """Send an order confirmation email to the store.  Errors are logged but
+    do not bubble up so that a missing/mis-configured SMTP server never blocks
+    a successful order submission."""
+    if not SMTP_HOST or not to_email:
+        logger.info("Email not configured or no recipient – skipping confirmation email")
+        return
+
+    try:
+        subject = f"Order Confirmation – {store_name}"
+
+        # Build plain-text body
+        lines = [
+            f"Hi {store_name},",
+            "",
+            f"Your order has been placed successfully by {ordered_by}.",
+            f"Delivery Date: {delivery_date}",
+            "",
+            "Order Summary:",
+        ]
+        for entry in items:
+            lines.append(f"  • {entry.get('item', '')} ({entry.get('category', '')}) – Qty: {entry.get('qty', 0)}")
+        lines += [
+            "",
+            "Thank you for your order!",
+            "– Green Meadow Farms",
+        ]
+        text_body = "\n".join(lines)
+
+        # Build HTML body
+        item_rows = "".join(
+            f"<tr><td>{entry.get('item', '')}</td><td>{entry.get('category', '')}</td>"
+            f"<td style='text-align:center'>{entry.get('qty', 0)}</td></tr>"
+            for entry in items
+        )
+        html_body = f"""
+        <html><body>
+        <p>Hi <strong>{store_name}</strong>,</p>
+        <p>Your order has been placed successfully by <strong>{ordered_by}</strong>.</p>
+        <p><strong>Delivery Date:</strong> {delivery_date}</p>
+        <h3>Order Summary</h3>
+        <table border="1" cellpadding="6" cellspacing="0"
+               style="border-collapse:collapse;font-family:sans-serif">
+          <thead>
+            <tr style="background:#4a7c59;color:#fff">
+              <th>Item</th><th>Category</th><th>Qty</th>
+            </tr>
+          </thead>
+          <tbody>{item_rows}</tbody>
+        </table>
+        <br/>
+        <p>Thank you for your order!<br/>– Green Meadow Farms</p>
+        </body></html>
+        """
+
+        msg = MIMEMultipart("alternative")
+        msg["Subject"] = subject
+        msg["From"] = SMTP_FROM_EMAIL
+        msg["To"] = to_email
+        msg.attach(MIMEText(text_body, "plain"))
+        msg.attach(MIMEText(html_body, "html"))
+
+        with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as server:
+            server.ehlo()
+            server.starttls(context=ssl.create_default_context())
+            if SMTP_USERNAME and SMTP_PASSWORD:
+                server.login(SMTP_USERNAME, SMTP_PASSWORD)
+            server.sendmail(SMTP_FROM_EMAIL, [to_email], msg.as_string())
+
+        logger.info("Confirmation email sent to %s", to_email)
+    except Exception as exc:
+        logger.error("Failed to send confirmation email: %s", exc)
+
+
 # ---------------------------------------------------------------------------
 # Routes
 # ---------------------------------------------------------------------------
@@ -125,6 +218,7 @@ def login():
                         data = resp.json()
                         session["store_id"] = data["store_id"]
                         session["store_name"] = data["store_name"]
+                        session["store_email"] = data.get("email") or ""
                         logger.info("Store '%s' logged in", data["store_name"])
                         return redirect(url_for("dashboard"))
                     except ValueError as exc:
@@ -258,10 +352,13 @@ def cart_clear():
 def order_submit():
     data = request.get_json(silent=True) or {}
     delivery_date = data.get("delivery_date", "").strip()
+    ordered_by = data.get("ordered_by", "").strip()
     cart = session.get("cart", [])
 
     if not delivery_date:
         return jsonify({"error": "Please select a delivery date."}), 400
+    if not ordered_by:
+        return jsonify({"error": "Please enter the name of the person placing the order."}), 400
     if not cart:
         return jsonify({"error": "Your cart is empty."}), 400
 
@@ -274,6 +371,7 @@ def order_submit():
             "qty": item["qty"],
             "delivery_date": delivery_date,
             "submitted_at": submitted_at,
+            "ordered_by": ordered_by,
         }
         for item in cart
     ]
@@ -282,6 +380,13 @@ def order_submit():
     if resp is None:
         return jsonify({"error": "Could not reach the server. Please try again."}), 503
     if resp.status_code == 200:
+        _send_order_confirmation(
+            to_email=session.get("store_email", ""),
+            store_name=session["store_name"],
+            ordered_by=ordered_by,
+            delivery_date=delivery_date,
+            items=cart,
+        )
         session["cart"] = []
         return jsonify({"success": True, "message": "Order submitted successfully!"})
 

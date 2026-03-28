@@ -22,6 +22,7 @@ class Order(Base):
     qty = Column(Integer)
     delivery_date = Column(String)
     submitted_at = Column(String, index=True)
+    ordered_by = Column(String, nullable=True)
 
 
 class Store(Base):
@@ -31,6 +32,7 @@ class Store(Base):
     store_name = Column(String, index=True)
     username = Column(String, unique=True, index=True)
     password = Column(String)
+    email = Column(String, nullable=True)
 
 
 class Setting(Base):
