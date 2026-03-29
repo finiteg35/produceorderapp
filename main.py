@@ -25,6 +25,7 @@ from schemas import (
     LoginRequest,
     StoreLoginResponse,
     OrderSubmitItem,
+    ResetPasswordRequest,
 )
 
 # ---------------------------------------------------------------------------
@@ -228,9 +229,9 @@ def create_store(store: StoreCreate, db: Session = Depends(get_db)):
 
 
 @app.post("/stores/reset-password/{store_id}")
-def reset_store_password(store_id: int, db: Session = Depends(get_db)):
+def reset_store_password(store_id: int, body: ResetPasswordRequest, db: Session = Depends(get_db)):
     logger.info("POST /stores/reset-password/%d", store_id)
-    store = crud.reset_store_password(db, store_id, "reset123")
+    store = crud.reset_store_password(db, store_id, body.new_password)
     if not store:
         raise HTTPException(status_code=404, detail="Store not found")
     return {"message": f"Password reset for {store.store_name}"}
