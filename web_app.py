@@ -11,8 +11,10 @@ Or with Gunicorn:
     gunicorn web_app:app
 """
 
+import io
 import os
 import logging
+import secrets
 import smtplib
 import ssl
 from datetime import datetime
@@ -21,6 +23,8 @@ from email.mime.text import MIMEText
 from functools import wraps
 
 import requests
+import openpyxl
+from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 from flask import (
     Flask,
     render_template,
@@ -30,6 +34,7 @@ from flask import (
     session,
     jsonify,
     flash,
+    send_file,
 )
 
 # ---------------------------------------------------------------------------
@@ -47,6 +52,9 @@ SMTP_USERNAME = os.environ.get("SMTP_USERNAME", "")
 SMTP_PASSWORD = os.environ.get("SMTP_PASSWORD", "")
 SMTP_FROM_EMAIL = os.environ.get("SMTP_FROM_EMAIL", SMTP_USERNAME)
 
+ADMIN_USERNAME = os.environ.get("ADMIN_USERNAME", "admin")
+ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "admin123")
+
 app = Flask(__name__)
 app.secret_key = SECRET_KEY
 app.config["SESSION_COOKIE_HTTPONLY"] = True
@@ -54,6 +62,12 @@ app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+if not os.environ.get("ADMIN_PASSWORD"):
+    logger.warning(
+        "ADMIN_PASSWORD env var is not set – using insecure default. "
+        "Set ADMIN_PASSWORD in your environment before deploying."
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -66,6 +80,16 @@ def login_required(f):
     def decorated(*args, **kwargs):
         if "store_id" not in session:
             return redirect(url_for("login"))
+        return f(*args, **kwargs)
+    return decorated
+
+
+def admin_required(f):
+    """Decorator: redirect to admin login page if the admin is not authenticated."""
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if not session.get("is_admin"):
+            return redirect(url_for("admin_login"))
         return f(*args, **kwargs)
     return decorated
 
@@ -175,6 +199,93 @@ def _send_order_confirmation(
         logger.info("Confirmation email sent to %s", to_email)
     except Exception as exc:
         logger.error("Failed to send confirmation email: %s", exc)
+
+
+# ---------------------------------------------------------------------------
+# Spreadsheet builder
+# ---------------------------------------------------------------------------
+
+def _build_order_spreadsheet(orders: list, delivery_date: str) -> io.BytesIO:
+    """Build an Excel workbook from a list of orders for the given delivery date.
+
+    Layout:
+      Row 1 (header): Category | Item | <Store 1> | <Store 2> | …
+      Subsequent rows: one row per (category, item) pair, quantities per store.
+    Items are sorted by category then name; stores are sorted alphabetically.
+    """
+    # Gather unique stores and (category, item) pairs
+    stores = sorted({o.get("store_name", "") for o in orders})
+    items_set = set()
+    for o in orders:
+        items_set.add((o.get("category", ""), o.get("item", "")))
+    items_sorted = sorted(items_set)  # sorts by (category, item)
+
+    # Build lookup: (category, item, store) -> qty
+    qty_map: dict = {}
+    for o in orders:
+        key = (o.get("category", ""), o.get("item", ""), o.get("store_name", ""))
+        qty_map[key] = qty_map.get(key, 0) + int(o.get("qty", 0))
+
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = delivery_date[:10] if delivery_date else "Orders"
+
+    # Styles
+    header_font = Font(bold=True, color="FFFFFF")
+    header_fill = PatternFill("solid", fgColor="4A7C59")
+    category_fill = PatternFill("solid", fgColor="D9EAD3")
+    center_align = Alignment(horizontal="center", vertical="center")
+    thin_border_side = Side(style="thin", color="BBBBBB")
+    cell_border = Border(
+        left=thin_border_side,
+        right=thin_border_side,
+        top=thin_border_side,
+        bottom=thin_border_side,
+    )
+
+    # Header row
+    headers = ["Category", "Item"] + stores
+    for col_idx, header in enumerate(headers, start=1):
+        cell = ws.cell(row=1, column=col_idx, value=header)
+        cell.font = header_font
+        cell.fill = header_fill
+        cell.alignment = center_align
+        cell.border = cell_border
+
+    # Data rows
+    for row_idx, (category, item) in enumerate(items_sorted, start=2):
+        cat_cell = ws.cell(row=row_idx, column=1, value=category)
+        item_cell = ws.cell(row=row_idx, column=2, value=item)
+        for cell in (cat_cell, item_cell):
+            cell.fill = category_fill
+            cell.border = cell_border
+            cell.alignment = Alignment(vertical="center")
+
+        for col_idx, store in enumerate(stores, start=3):
+            qty = qty_map.get((category, item, store), 0)
+            qty_cell = ws.cell(row=row_idx, column=col_idx, value=qty if qty else "")
+            qty_cell.alignment = center_align
+            qty_cell.border = cell_border
+
+    # Column widths
+    ws.column_dimensions["A"].width = 20
+    ws.column_dimensions["B"].width = 28
+    for col_idx in range(3, 3 + len(stores)):
+        col_letter = openpyxl.utils.get_column_letter(col_idx)
+        # Use store name length + padding, minimum 12
+        store_name = stores[col_idx - 3]
+        ws.column_dimensions[col_letter].width = max(12, len(store_name) + 4)
+
+    # Freeze header row and first two columns
+    ws.freeze_panes = "C2"
+
+    # Row height for header
+    ws.row_dimensions[1].height = 20
+
+    output = io.BytesIO()
+    wb.save(output)
+    output.seek(0)
+    return output
 
 
 # ---------------------------------------------------------------------------
@@ -412,6 +523,110 @@ def history():
         "history.html",
         store_name=store_name,
         orders=orders,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Admin – login / dashboard / spreadsheet download
+# ---------------------------------------------------------------------------
+
+@app.route("/admin/login", methods=["GET", "POST"])
+def admin_login():
+    if session.get("is_admin"):
+        return redirect(url_for("admin_dashboard"))
+
+    error = None
+    if request.method == "POST":
+        username = request.form.get("username", "").strip()
+        password = request.form.get("password", "").strip()
+        user_ok = secrets.compare_digest(username, ADMIN_USERNAME)
+        pass_ok = secrets.compare_digest(password, ADMIN_PASSWORD)
+        if user_ok and pass_ok:
+            session["is_admin"] = True
+            return redirect(url_for("admin_dashboard"))
+        error = "Invalid admin credentials."
+
+    return render_template("admin_login.html", error=error)
+
+
+@app.route("/admin/logout")
+def admin_logout():
+    session.pop("is_admin", None)
+    return redirect(url_for("admin_login"))
+
+
+@app.route("/admin")
+@admin_required
+def admin_dashboard():
+    # Fetch allowed delivery dates for the date picker
+    dates_resp = _api("GET", "/settings/allowed_dates")
+    allowed_dates = []
+    if dates_resp and dates_resp.status_code == 200:
+        data = dates_resp.json()
+        if isinstance(data, list):
+            allowed_dates = data
+        elif isinstance(data, dict):
+            allowed_dates = data.get("dates", data.get("allowed_dates", []))
+
+    selected_date = request.args.get("delivery_date", "").strip()
+    orders = []
+    stores = []
+    items_sorted = []
+    qty_map: dict = {}
+
+    if selected_date:
+        resp = _api("GET", f"/orders?date_prefix={selected_date}")
+        if resp and resp.status_code == 200:
+            orders = resp.json()
+        stores = sorted({o.get("store_name", "") for o in orders})
+        items_set = set()
+        for o in orders:
+            items_set.add((o.get("category", ""), o.get("item", "")))
+        items_sorted = sorted(items_set)
+        for o in orders:
+            key = (o.get("category", ""), o.get("item", ""), o.get("store_name", ""))
+            qty_map[key] = qty_map.get(key, 0) + int(o.get("qty", 0))
+
+    return render_template(
+        "admin.html",
+        allowed_dates=allowed_dates,
+        selected_date=selected_date,
+        stores=stores,
+        items=items_sorted,
+        qty_map=qty_map,
+    )
+
+
+@app.route("/admin/orders/spreadsheet")
+@admin_required
+def admin_spreadsheet():
+    delivery_date = request.args.get("delivery_date", "").strip()
+    if not delivery_date:
+        flash("Please select a delivery date.", "error")
+        return redirect(url_for("admin_dashboard"))
+
+    resp = _api("GET", f"/orders?date_prefix={delivery_date}")
+    if resp is None:
+        flash("Could not reach the server. Please try again.", "error")
+        return redirect(url_for("admin_dashboard", delivery_date=delivery_date))
+    if resp.status_code != 200:
+        flash("Failed to retrieve orders.", "error")
+        return redirect(url_for("admin_dashboard", delivery_date=delivery_date))
+
+    orders = resp.json()
+    if not orders:
+        flash("No orders found for that delivery date.", "warning")
+        return redirect(url_for("admin_dashboard", delivery_date=delivery_date))
+
+    spreadsheet = _build_order_spreadsheet(orders, delivery_date)
+    safe_date = delivery_date.replace(" ", "_").replace(",", "").replace("/", "-")
+    filename = f"orders_{safe_date}.xlsx"
+
+    return send_file(
+        spreadsheet,
+        as_attachment=True,
+        download_name=filename,
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     )
 
 
