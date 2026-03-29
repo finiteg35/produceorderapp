@@ -1,6 +1,6 @@
 # schemas.py
 from typing import Optional, List
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class InventoryBase(BaseModel):
@@ -20,8 +20,7 @@ class InventoryUpdate(BaseModel):
 class InventoryOut(InventoryBase):
     id: int
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class OrderBase(BaseModel):
@@ -41,8 +40,7 @@ class OrderCreate(OrderBase):
 class OrderOut(OrderBase):
     id: int
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class SettingBase(BaseModel):
@@ -51,8 +49,7 @@ class SettingBase(BaseModel):
 
 
 class SettingOut(SettingBase):
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class AllowedDatesUpdate(BaseModel):
@@ -76,8 +73,7 @@ class StoreOut(BaseModel):
     username: str
     email: Optional[str] = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class LoginRequest(BaseModel):
