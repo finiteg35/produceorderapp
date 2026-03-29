@@ -138,6 +138,20 @@ produceorderapp/
 └── README.md        # This file
 ```
 
+## Store Credentials
+
+The following store accounts are pre-configured for the order portal:
+
+| Store Name | Username | Password |
+|---|---|---|
+| Scarborough Hannaford | `scarborough_hannaford` | `Scarborough123!` |
+| Westbrook Hannaford | `westbrook_hannaford` | `Westbrook123!` |
+| Riverside Hannaford | `riverside_hannaford` | `Riverside123!` |
+| Rosemont Bakery | `rosemont_bakery` | `Rosemont123!` |
+| Scratch Bakery | `scratch_bakery` | `Scratch123!` |
+| Two Fat Cats Bakery | `two_fat_cats` | `TwoFatCats123!` |
+| Becky's Diner | `beckys_diner` | `Beckys123!` |
+
 ## License
 
 This project is open source. Feel free to use and modify it for your needs.
