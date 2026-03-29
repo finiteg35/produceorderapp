@@ -1,0 +1,251 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Dashboard – Green Meadow Farms{% endblock %}
+
+{% block nav %}
+<nav class="navbar">
+  <div class="navbar-brand">
+    <img src="https://github.com/user-attachments/assets/f5422071-54e3-4397-be4f-dedc8ca16422"
+         alt="Green Meadow Farms"
+         class="navbar-logo" />
+    <span class="logo-text">Green Meadow Farms Order Portal</span>
+  </div>
+  <div class="navbar-links">
+    <span class="nav-store">Admin</span>
+    <a href="{{ url_for('admin_logout') }}" class="nav-link nav-logout">Logout</a>
+  </div>
+</nav>
+{% endblock %}
+
+{% block content %}
+<div class="admin-wrapper">
+  <div class="admin-header">
+    <h1>📊 Delivery Order Spreadsheet</h1>
+    <p class="admin-sub">Select a delivery date to preview and download the order spreadsheet.</p>
+  </div>
+
+  <!-- Date selection form -->
+  <div class="admin-date-form">
+    <form method="GET" action="{{ url_for('admin_dashboard') }}" class="date-picker-form">
+      <div class="form-group form-inline">
+        <label for="delivery-date-select" class="form-label">Delivery Date</label>
+        {% if allowed_dates %}
+        <select id="delivery-date-select" name="delivery_date" class="form-input form-select">
+          <option value="">— Select a date —</option>
+          {% for date in allowed_dates %}
+          <option value="{{ date }}" {% if date == selected_date %}selected{% endif %}>{{ date }}</option>
+          {% endfor %}
+        </select>
+        {% else %}
+        <input
+          type="text"
+          id="delivery-date-select"
+          name="delivery_date"
+          class="form-input"
+          placeholder="e.g. March 29, 2026"
+          value="{{ selected_date }}"
+        />
+        {% endif %}
+        <button type="submit" class="btn btn-primary">View Orders</button>
+      </div>
+    </form>
+  </div>
+
+  {% if selected_date %}
+    {% if items %}
+    <!-- Download button -->
+    <div class="admin-actions">
+      <a href="{{ url_for('admin_spreadsheet', delivery_date=selected_date) }}"
+         class="btn btn-success">
+        ⬇️ Download Excel Spreadsheet
+      </a>
+      <span class="admin-date-label">{{ selected_date }}</span>
+    </div>
+
+    <!-- Preview table -->
+    <div class="admin-table-wrapper">
+      <table class="admin-table">
+        <thead>
+          <tr>
+            <th class="col-category">Category</th>
+            <th class="col-item">Item</th>
+            {% for store in stores %}
+            <th class="col-store">{{ store }}</th>
+            {% endfor %}
+          </tr>
+        </thead>
+        <tbody>
+          {% set ns = namespace(prev_category='') %}
+          {% for category, item in items %}
+          <tr {% if loop.index is odd %}class="row-odd"{% endif %}>
+            <td class="col-category">
+              {% if category != ns.prev_category %}
+                <span class="category-tag">{{ category }}</span>
+                {% set ns.prev_category = category %}
+              {% endif %}
+            </td>
+            <td class="col-item">{{ item }}</td>
+            {% for store in stores %}
+            {% set qty = qty_map.get((category, item, store), 0) %}
+            <td class="col-qty {% if qty %}has-qty{% endif %}">
+              {{ qty if qty else '' }}
+            </td>
+            {% endfor %}
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="empty-state">
+      <p>No orders found for <strong>{{ selected_date }}</strong>.</p>
+    </div>
+    {% endif %}
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<style>
+  .admin-wrapper {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 1.5rem 1rem;
+  }
+
+  .admin-header {
+    margin-bottom: 1.5rem;
+  }
+
+  .admin-header h1 {
+    font-size: 1.75rem;
+    color: var(--color-primary, #4a7c59);
+    margin-bottom: 0.25rem;
+  }
+
+  .admin-sub {
+    color: #666;
+  }
+
+  .admin-date-form {
+    background: #fff;
+    border-radius: 8px;
+    padding: 1.25rem 1.5rem;
+    box-shadow: 0 1px 4px rgba(0,0,0,.08);
+    margin-bottom: 1.5rem;
+  }
+
+  .date-picker-form .form-inline {
+    display: flex;
+    align-items: flex-end;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+  }
+
+  .date-picker-form .form-label {
+    margin-bottom: 0.25rem;
+  }
+
+  .form-select {
+    min-width: 220px;
+  }
+
+  .admin-actions {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1rem;
+  }
+
+  .btn-success {
+    background: #4a7c59;
+    color: #fff;
+    border: none;
+    padding: 0.55rem 1.25rem;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 600;
+    text-decoration: none;
+    display: inline-block;
+    transition: background 0.2s;
+  }
+
+  .btn-success:hover {
+    background: #3a6347;
+  }
+
+  .admin-date-label {
+    font-weight: 600;
+    color: #444;
+  }
+
+  .admin-table-wrapper {
+    overflow-x: auto;
+    border-radius: 8px;
+    box-shadow: 0 1px 4px rgba(0,0,0,.08);
+  }
+
+  .admin-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+    background: #fff;
+  }
+
+  .admin-table thead tr {
+    background: #4a7c59;
+    color: #fff;
+  }
+
+  .admin-table th,
+  .admin-table td {
+    padding: 0.55rem 0.75rem;
+    border: 1px solid #e0e0e0;
+    white-space: nowrap;
+  }
+
+  .admin-table .col-category {
+    min-width: 140px;
+    font-weight: 600;
+  }
+
+  .admin-table .col-item {
+    min-width: 180px;
+  }
+
+  .admin-table .col-store {
+    min-width: 100px;
+    text-align: center;
+  }
+
+  .admin-table .col-qty {
+    text-align: center;
+    color: #888;
+  }
+
+  .admin-table .col-qty.has-qty {
+    color: #2d6a4f;
+    font-weight: 700;
+  }
+
+  .admin-table .row-odd {
+    background: #f9fdf9;
+  }
+
+  .category-tag {
+    display: inline-block;
+    background: #d9ead3;
+    color: #2d6a4f;
+    border-radius: 4px;
+    padding: 2px 8px;
+    font-size: 0.8rem;
+    font-weight: 600;
+  }
+
+  .empty-state {
+    text-align: center;
+    padding: 3rem 1rem;
+    color: #777;
+  }
+</style>
+{% endblock %}
