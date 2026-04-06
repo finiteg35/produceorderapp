@@ -53,12 +53,20 @@
 
   {% if selected_date %}
     {% if items %}
-    <!-- Download button -->
+    <!-- Action buttons -->
     <div class="admin-actions">
       <a href="{{ url_for('admin_spreadsheet', delivery_date=selected_date) }}"
          class="btn btn-success">
         ⬇️ Download Excel Spreadsheet
       </a>
+      {% if admin_email %}
+      <form method="POST" action="{{ url_for('admin_email_spreadsheet') }}" style="display:inline">
+        <input type="hidden" name="delivery_date" value="{{ selected_date }}">
+        <button type="submit" class="btn btn-email">
+          📧 Email Spreadsheet to {{ admin_email }}
+        </button>
+      </form>
+      {% endif %}
       <span class="admin-date-label">{{ selected_date }}</span>
     </div>
 
@@ -172,6 +180,23 @@
 
   .btn-success:hover {
     background: #3a6347;
+  }
+
+  .btn-email {
+    background: #1a73e8;
+    color: #fff;
+    border: none;
+    padding: 0.55rem 1.25rem;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 600;
+    text-decoration: none;
+    display: inline-block;
+    transition: background 0.2s;
+  }
+
+  .btn-email:hover {
+    background: #1558b0;
   }
 
   .admin-date-label {
