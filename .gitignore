@@ -44,3 +44,6 @@ htmlcov/
 # Database
 *.db
 *.sqlite3
+
+# Order persistence file (runtime data, not committed)
+orders.json
