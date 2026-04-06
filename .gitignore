@@ -44,3 +44,6 @@ htmlcov/
 # Database
 *.db
 *.sqlite3
+
+# JSON data store (runtime data – not committed to version control)
+data/
