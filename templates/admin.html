@@ -29,27 +29,24 @@
     <form method="GET" action="{{ url_for('admin_dashboard') }}" class="date-picker-form">
       <div class="form-group form-inline">
         <label for="delivery-date-select" class="form-label">Delivery Date</label>
-        {% if allowed_dates %}
-        <select id="delivery-date-select" name="delivery_date" class="form-input form-select">
-          <option value="">— Select a date —</option>
-          {% for date in allowed_dates %}
-          <option value="{{ date }}" {% if date == selected_date %}selected{% endif %}>{{ date }}</option>
-          {% endfor %}
-        </select>
-        {% else %}
         <input
           type="text"
           id="delivery-date-select"
           name="delivery_date"
           class="form-input"
-          placeholder="e.g. March 29, 2026"
+          placeholder="Select a delivery date…"
           value="{{ selected_date }}"
+          readonly
         />
-        {% endif %}
         <button type="submit" class="btn btn-primary">View Orders</button>
       </div>
     </form>
   </div>
+
+  <script>
+    window.__adminAllowedDates = {{ allowed_dates | tojson | safe }};
+    window.__adminSelectedDate = {{ selected_date | tojson | safe }};
+  </script>
 
   {% if selected_date %}
     {% if items %}
@@ -105,7 +102,30 @@
 </div>
 {% endblock %}
 
+{% block head %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.css" />
+{% endblock %}
+
 {% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.js"></script>
+<script>
+  (function () {
+    var allowedDates = window.__adminAllowedDates || [];
+    var selectedDate = window.__adminSelectedDate || '';
+
+    var config = {
+      dateFormat: 'F j, Y',
+      defaultDate: selectedDate || null,
+      disableMobile: true,
+    };
+
+    if (allowedDates.length > 0) {
+      config.enable = allowedDates;
+    }
+
+    flatpickr('#delivery-date-select', config);
+  })();
+</script>
 <style>
   .admin-wrapper {
     max-width: 1200px;
