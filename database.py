@@ -1,7 +1,6 @@
 import os
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, declarative_base
-from sqlalchemy.pool import StaticPool
 
 DATABASE_URL = os.getenv("DATABASE_URL")
 
@@ -15,14 +14,19 @@ if DATABASE_URL.startswith("postgres://"):
 
 # Add SSL mode for Render compatibility
 if "sslmode" not in DATABASE_URL:
-    DATABASE_URL = DATABASE_URL + "?sslmode=require"
+    separator = "&" if "?" in DATABASE_URL else "?"
+    DATABASE_URL = DATABASE_URL + separator + "sslmode=require"
 
-# Use StaticPool for better Render free tier compatibility
-# StaticPool reuses connections efficiently without creating new ones per request
+try:
+    connect_timeout = int(os.getenv("DB_CONNECT_TIMEOUT", "10"))
+except ValueError:
+    connect_timeout = 10
+
 engine = create_engine(
     DATABASE_URL,
-    poolclass=StaticPool,
-    connect_args={"connect_timeout": 5},
+    pool_pre_ping=True,
+    pool_recycle=300,  # recycle connections every 5 minutes to prevent silent TCP timeouts
+    connect_args={"connect_timeout": connect_timeout},
     echo=False
 )
 
