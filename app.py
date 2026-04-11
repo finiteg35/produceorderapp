@@ -361,11 +361,12 @@ def users():
 
 @app.route("/users/add", methods=["POST"])
 def users_add():
-    try:
-        result = cli.users_add(request.form["store"], request.form["username"])
-        return _redirect("users", f"User '{result['username']}' added.")
-    except SystemExit as exc:
-        return _redirect("users", str(exc), cls="err")
+    username = request.form["username"]
+    existing = [u for u in cli.users_list() if u.get("username") == username]
+    if existing:
+        return _redirect("users", f"Username '{username}' already exists.", cls="err")
+    result = cli.users_add(request.form["store"], username)
+    return _redirect("users", f"User '{result['username']}' added.")
 
 
 # ---------------------------------------------------------------------------
@@ -373,4 +374,4 @@ def users_add():
 # ---------------------------------------------------------------------------
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(debug=False)
