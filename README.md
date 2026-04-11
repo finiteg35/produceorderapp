@@ -1,30 +1,20 @@
 # Produce Order App
 
-A full-stack produce ordering application with a FastAPI backend and a Flask web frontend. Designed for deployment on [Render](https://render.com) with a PostgreSQL database.
+A command-line produce ordering application that manages inventory, orders,
+delivery dates, and store users using plain JSON files for storage.
 
 ## Features
 
-- Inventory management (list, create, update produce items)
-- Order submission and retrieval with filtering by store, date, and item
-- Configurable allowed delivery dates
-- CORS-enabled for cross-origin clients (e.g., mobile/desktop apps)
-- Browser-based store login and ordering dashboard (Flask frontend)
-
-## Tech Stack
-
-- **Backend API**: [FastAPI](https://fastapi.tiangolo.com/)
-- **Web Frontend**: [Flask](https://flask.palletsprojects.com/) with Jinja2 templates
-- **ORM**: [SQLAlchemy](https://www.sqlalchemy.org/)
-- **Database**: PostgreSQL (via `psycopg2-binary`)
-- **Server**: [Uvicorn](https://www.uvicorn.org/) (API) / Gunicorn or `python web_app.py` (frontend)
-- **Deployment**: [Render](https://render.com)
+- **Inventory management** – add, list, update, and remove produce items
+- **Order submission** – place orders and retrieve full order history
+- **Configurable delivery dates** – view and set allowed delivery dates
+- **Store users** – list and add store accounts
 
 ## Prerequisites
 
-- Python 3.9+
-- PostgreSQL running locally (for local development)
+- Python 3.9 or higher (no third-party packages required)
 
-## Local Development Setup
+## Setup
 
 1. **Clone the repository**
 
@@ -33,239 +23,115 @@ A full-stack produce ordering application with a FastAPI backend and a Flask web
    cd produceorderapp
    ```
 
-2. **Create and activate a virtual environment**
+2. **Run the app** – the data directory (`data/`) ships with example files and
+   will be created automatically if it does not exist.
 
    ```bash
-   python -m venv venv
-   source venv/bin/activate      # macOS/Linux
-   venv\Scripts\activate         # Windows
+   python main.py --help
    ```
 
-3. **Install dependencies**
-
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-4. **Configure the database**
-
-   Create a local PostgreSQL database named `produce_app`:
-
-   ```sql
-   CREATE DATABASE produce_app;
-   ```
-
-   By default the app connects to:
-
-   ```
-   postgresql://postgres:postgres@localhost:5432/produce_app
-   ```
-
-   To use a different connection string, set the `DATABASE_URL` environment variable:
-
-   ```bash
-   export DATABASE_URL=postgresql://<user>:<password>@<host>:<port>/<dbname>
-   ```
-
-5. **Run the FastAPI backend**
-
-   ```bash
-   uvicorn main:app --reload
-   ```
-
-   The API will be available at `http://localhost:8000`.
-
-6. **Run the Flask web frontend** (in a separate terminal)
-
-   ```bash
-   python web_app.py
-   ```
-
-   The web interface will be available at `http://localhost:5000`.
-
-## Flask Web Frontend
-
-The Flask web frontend (`web_app.py`) provides a browser-based interface for store staff to log in and place produce orders. It communicates with the FastAPI backend over HTTP.
-
-### Frontend Files Called When the App Runs
-
-Below are the exact files loaded each time a page is served.
-
-#### 1. `web_app.py` — Flask Application Entry Point
-
-This is the main server file. It handles all HTTP routes, manages session state (cart, login), and communicates with the FastAPI backend.
-
-Key routes:
-
-| Route | Method | Handler | Template Rendered |
-|-------|--------|---------|-------------------|
-| `/` | GET | `index()` | redirects to `/login` or `/dashboard` |
-| `/login` | GET, POST | `login()` | `templates/login.html` |
-| `/logout` | GET | `logout()` | redirects to `/login` |
-| `/dashboard` | GET | `dashboard()` | `templates/dashboard.html` |
-| `/history` | GET | `history()` | `templates/history.html` |
-| `/cart/add` | POST | `cart_add()` | JSON response |
-| `/cart/remove` | POST | `cart_remove()` | JSON response |
-| `/cart/clear` | POST | `cart_clear()` | JSON response |
-| `/order/submit` | POST | `order_submit()` | JSON response |
-
-#### 2. `templates/base.html` — Base HTML Template
-
-Every page extends this file. It defines the shared page structure (navbar, footer) and loads the CSS and JavaScript files:
-
-- **Loads** `static/style.css` via `<link>` tag (line 7)
-- **Loads** `static/script.js` via `<script>` tag (line 48)
-
-#### 3. HTML Page Templates (each extends `base.html`)
-
-| File | Route | Description |
-|------|-------|-------------|
-| `templates/login.html` | `/login` | Store login form |
-| `templates/dashboard.html` | `/dashboard` | Inventory browser and cart/ordering page |
-| `templates/history.html` | `/history` | Submitted order history |
-
-#### 4. `static/style.css` — Stylesheet
-
-All visual styling for the app: navbar, forms, buttons, cart panel, modals, and responsive/mobile layout. Loaded on every page through `base.html`.
-
-#### 5. `static/script.js` — Client-Side JavaScript
-
-All browser-side interactivity. Loaded on every page through `base.html`. On `DOMContentLoaded` it runs:
-
-- `initCategories()` — collapsible category headers
-- `initCartToggle()` — mobile cart panel open/close
-- `initEventDelegation()` — attaches click handlers for add/remove/clear/submit
-- `setDefaultDeliveryDate()` — pre-selects tomorrow as the default delivery date
-
-User actions trigger `fetch()` calls to the Flask cart and order routes listed above.
-
-### Complete File Loading Chain
+## Usage
 
 ```
-Browser visits http://localhost:5000/
-        │
-        ▼
-web_app.py  (Flask app receives the request)
-        │
-        ├─ calls _api() → FastAPI backend (main.py) for inventory / dates / auth
-        │
-        ▼
-Jinja2 renders the matching template:
-        │
-        ├─ templates/base.html
-        │       ├─ <link>   static/style.css
-        │       └─ <script> static/script.js
-        │
-        └─ templates/login.html     (on /login)
-           templates/dashboard.html (on /dashboard)
-           templates/history.html   (on /history)
-
-Browser renders HTML + CSS
-        │
-        ▼
-static/script.js  DOMContentLoaded fires
-        │
-        ├─ initCategories()
-        ├─ initCartToggle()
-        ├─ initEventDelegation()
-        └─ setDefaultDeliveryDate()
-
-User interaction → fetch() → Flask route → FastAPI backend → response
+python main.py <command> <subcommand> [options]
 ```
 
-## API Endpoints
+### Inventory
 
-| Method | Path | Description |
-|--------|------|-------------|
-| `GET` | `/` | Health check |
-| `GET` | `/inventory` | List all inventory items |
-| `GET` | `/inventory/item` | Get a single item by `category` and `item` query params |
-| `POST` | `/inventory` | Create a new inventory item |
-| `PUT` | `/inventory` | Update the quantity of an existing item |
-| `DELETE` | `/inventory/category/{category}` | Delete all items in a specific category |
-| `DELETE` | `/inventory/{category}/{item}` | Delete a specific inventory item |
-| `POST` | `/orders` | Submit a new order |
-| `GET` | `/orders` | List orders (filterable by `store_name`, `date_prefix`, `item_search`) |
-| `GET` | `/orders/store/{store_name}` | List all orders for a specific store |
-| `GET` | `/settings/allowed_dates` | Get the list of allowed delivery dates |
-| `PUT` | `/settings/allowed_dates` | Update the list of allowed delivery dates |
+| Command | Description |
+|---------|-------------|
+| `python main.py inventory list` | List all inventory items |
+| `python main.py inventory add --category CAT --item ITEM --qty QTY` | Add or update an item |
+| `python main.py inventory update --category CAT --item ITEM --qty QTY` | Update quantity |
+| `python main.py inventory remove --category CAT --item ITEM` | Remove an item |
 
-Interactive API documentation is auto-generated by FastAPI and available at:
+### Orders
 
-- **Swagger UI**: `http://localhost:8000/docs`
-- **ReDoc**: `http://localhost:8000/redoc`
+| Command | Description |
+|---------|-------------|
+| `python main.py orders list` | List all orders |
+| `python main.py orders list --store STORE` | Filter orders by store name |
+| `python main.py orders list --date DATE` | Filter by submission date prefix (e.g. `2025-04`) |
+| `python main.py orders list --item ITEM` | Filter by item name |
+| `python main.py orders add --store STORE --category CAT --item ITEM --qty QTY --date DATE [--by USER]` | Submit a new order |
+| `python main.py orders remove --id ID` | Remove an order by ID |
 
-## Deployment (Render)
+### Delivery Dates
 
-The repository includes a `render.yaml` configuration file for one-click deployment to Render.
+| Command | Description |
+|---------|-------------|
+| `python main.py dates list` | Show allowed delivery dates |
+| `python main.py dates set "April 15, 2025" "April 16, 2025"` | Set specific dates |
+| `python main.py dates generate` | Auto-generate dates for the next 7 days |
 
-### Steps
+### Users
 
-1. Push this repository to GitHub.
-2. Log in to [Render](https://render.com) and click **New → Blueprint**.
-3. Connect your GitHub repository.
-4. Render will automatically detect `render.yaml` and provision:
-   - A free **Web Service** running the FastAPI app
-   - A free **PostgreSQL** database
-5. The `DATABASE_URL` environment variable is injected automatically from the linked database.
+| Command | Description |
+|---------|-------------|
+| `python main.py users list` | List all store users |
+| `python main.py users add --store STORE --username USERNAME` | Add a new user |
 
-The build command is:
+## Examples
 
 ```bash
-pip install -r requirements.txt
+# List inventory
+python main.py inventory list
+
+# Add a new inventory item
+python main.py inventory add --category "Squash" --item "Butternut - 20# bag" --qty 50
+
+# Generate allowed delivery dates for the coming week
+python main.py dates generate
+
+# Submit an order
+python main.py orders add \
+  --store "Scarborough Hannaford" \
+  --category "Potatoes" \
+  --item "White Chef - 50# bags" \
+  --qty 5 \
+  --date "April 15, 2025" \
+  --by scarborough_hannaford
+
+# List orders for a specific store
+python main.py orders list --store "Scarborough"
+
+# List all users
+python main.py users list
 ```
 
-The start command is:
+## Data Files
 
-```bash
-bash start.sh
-```
+All data is stored in the `data/` directory as human-readable JSON files:
 
-`start.sh` expands the `PORT` environment variable that Render injects at runtime and starts Uvicorn on the correct port.
+| File | Description |
+|------|-------------|
+| `data/inventory.json` | Produce inventory items |
+| `data/orders.json` | Submitted orders |
+| `data/users.json` | Store user accounts |
+| `data/settings.json` | App settings (allowed delivery dates) |
+
+The files ship with example data and can be edited directly with any text editor.
 
 ## Project Structure
 
 ```
 produceorderapp/
-│
-├── Backend (FastAPI)
-│   ├── main.py          # FastAPI application and route definitions
-│   ├── database.py      # SQLAlchemy engine and session setup
-│   ├── models.py        # ORM models (Inventory, Order, Setting)
-│   ├── schemas.py       # Pydantic schemas for request/response validation
-│   └── crud.py          # Database CRUD operations
-│
-├── Frontend (Flask)
-│   ├── web_app.py               # Flask app, routes, session/cart logic
-│   ├── templates/
-│   │   ├── base.html            # Shared layout; loads style.css + script.js
-│   │   ├── login.html           # Store login page
-│   │   ├── dashboard.html       # Inventory browser and ordering page
-│   │   └── history.html         # Order history page
-│   └── static/
-│       ├── style.css            # All page styles (navbar, forms, cart, modals)
-│       └── script.js            # Client-side interactivity (cart, order submit)
-│
-└── Configuration & Deployment
-    ├── start.sh         # Startup script for Render (expands $PORT)
-    ├── render.yaml      # Render deployment configuration
-    ├── requirements.txt # Python dependencies
-    └── README.md        # This file
+├── main.py          # Entire application – CLI entry point and all logic
+├── requirements.txt # No dependencies (standard library only)
+├── README.md        # This file
+└── data/
+    ├── inventory.json  # Example inventory data
+    ├── orders.json     # Example orders
+    └── users.json      # Example store users
 ```
 
-## Store Credentials
+## Customising the Data Directory
 
-The following store accounts are pre-configured for the order portal:
+Set the `DATA_DIR` environment variable to store files elsewhere:
 
-| Store Name | Username | Password |
-|---|---|---|
-| Scarborough Hannaford | `scarborough_hannaford` | `Scarborough123!` |
-| Westbrook Hannaford | `westbrook_hannaford` | `Westbrook123!` |
-| Riverside Hannaford | `riverside_hannaford` | `Riverside123!` |
-| Rosemont Bakery | `rosemont_bakery` | `Rosemont123!` |
-| Scratch Bakery | `scratch_bakery` | `Scratch123!` |
-| Two Fat Cats Bakery | `two_fat_cats` | `TwoFatCats123!` |
-| Becky's Diner | `beckys_diner` | `Beckys123!` |
+```bash
+DATA_DIR=/path/to/my/data python main.py inventory list
+```
 
 ## License
 
