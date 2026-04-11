@@ -1,9 +1,2 @@
-fastapi>=0.110.0
-uvicorn[standard]>=0.29.0
-python-dotenv>=1.0.0
-pydantic>=2.0.0
-flask>=3.0.0
-requests>=2.31.0
-gunicorn>=21.0.0
-bcrypt>=4.0.0
-openpyxl>=3.1.0
+# No third-party packages required.
+# The application uses only the Python 3.9+ standard library.

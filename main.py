@@ -1,280 +1,461 @@
-# main.py
-import logging
+#!/usr/bin/env python3
+"""
+Produce Order App – CLI edition
+================================
+Single-script application that manages produce inventory, orders, delivery
+dates, and store users using plain JSON files for storage.
+
+Usage
+-----
+    python main.py <command> [subcommand] [options]
+
+Commands
+--------
+    inventory list
+    inventory add   --category CAT --item ITEM --qty QTY
+    inventory update --category CAT --item ITEM --qty QTY
+    inventory remove --category CAT --item ITEM
+
+    orders list    [--store STORE] [--date DATE] [--item ITEM]
+    orders add     --store STORE --category CAT --item ITEM --qty QTY --date DATE [--by USER]
+    orders remove  --id ID
+
+    dates list
+    dates set   DATE [DATE ...]
+    dates generate
+
+    users list
+    users add   --store STORE --username USERNAME
+
+Run ``python main.py --help`` or ``python main.py <command> --help`` for details.
+"""
+
+import argparse
+import json
 import os
-import secrets
 import sys
-from contextlib import asynccontextmanager
-from typing import List, Optional
-
-from fastapi import FastAPI, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
-
-import crud
-import store as data_store
-from auth_utils import verify_password
-from schemas import (
-    InventoryOut,
-    InventoryCreate,
-    InventoryUpdate,
-    OrderCreate,
-    OrderOut,
-    AllowedDatesUpdate,
-    StoreOut,
-    StoreCreate,
-    LoginRequest,
-    StoreLoginResponse,
-    OrderSubmitItem,
-    ResetPasswordRequest,
-)
+import tempfile
+from datetime import datetime, timedelta
+from pathlib import Path
+from typing import Any, Dict, List, Optional
 
 # ---------------------------------------------------------------------------
-# Logging – write to stdout so Render captures it in its log viewer
+# Data directory / file paths
 # ---------------------------------------------------------------------------
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
-    handlers=[logging.StreamHandler(sys.stdout)],
-)
-logger = logging.getLogger(__name__)
+
+DATA_DIR = Path(os.environ.get("DATA_DIR", "data"))
+
+INVENTORY_FILE = DATA_DIR / "inventory.json"
+ORDERS_FILE = DATA_DIR / "orders.json"
+USERS_FILE = DATA_DIR / "users.json"
+SETTINGS_FILE = DATA_DIR / "settings.json"
 
 
 # ---------------------------------------------------------------------------
-# Lifespan – ensure data directory exists on startup
+# Low-level JSON helpers
 # ---------------------------------------------------------------------------
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    logger.info("Starting up – ensuring data directory exists...")
+
+def _load(path: Path, default: Any) -> Any:
+    """Load JSON from *path*; return *default* when the file is absent."""
+    if not path.exists():
+        return default
     try:
-        data_store.DATA_DIR.mkdir(parents=True, exist_ok=True)
-        logger.info("Data directory ready: %s", data_store.DATA_DIR.resolve())
+        with open(path, "r", encoding="utf-8") as fh:
+            return json.load(fh)
+    except json.JSONDecodeError as exc:
+        sys.exit(f"ERROR: {path} is corrupted and could not be parsed: {exc}")
+
+
+def _save(path: Path, data: Any) -> None:
+    """Atomically write *data* as JSON to *path*."""
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
+    fd, tmp_path = tempfile.mkstemp(dir=DATA_DIR, suffix=".tmp")
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as fh:
+            json.dump(data, fh, indent=2)
+        Path(tmp_path).replace(path)
     except Exception:
-        logger.exception("Could not create data directory – continuing anyway")
-    yield
-    logger.info("Shutting down cleanly")
+        os.unlink(tmp_path)
+        raise
 
 
-app = FastAPI(title="Produce Ordering Backend", lifespan=lifespan)
-
-# CORS so your Kivy app (or anything else) can talk to it
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],  # tighten later if needed
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+def _next_id(records: List[Dict]) -> int:
+    """Return max(id) + 1 across *records*, or 1 if the list is empty."""
+    return max((r.get("id", 0) for r in records), default=0) + 1
 
 
-# ---------- ROOT ----------
+# ---------------------------------------------------------------------------
+# Inventory operations
+# ---------------------------------------------------------------------------
 
-@app.get("/")
-def read_root():
-    logger.info("GET / health-check")
-    return {"status": "ok", "message": "Produce Ordering Backend running"}
+def inventory_list() -> List[Dict]:
+    items = _load(INVENTORY_FILE, [])
+    return sorted(items, key=lambda x: (x["category"], x["item"]))
 
 
-@app.head("/")
-def head_root():
-    """Render's health-check sends HEAD /; return 200 with no body."""
+def inventory_add(category: str, item: str, qty: int) -> Dict:
+    items = _load(INVENTORY_FILE, [])
+    for existing in items:
+        if existing["category"] == category and existing["item"] == item:
+            existing["qty"] = qty
+            _save(INVENTORY_FILE, items)
+            return existing
+    new_item = {"id": _next_id(items), "category": category, "item": item, "qty": qty}
+    items.append(new_item)
+    _save(INVENTORY_FILE, items)
+    return new_item
+
+
+def inventory_update(category: str, item: str, qty: int) -> Optional[Dict]:
+    items = _load(INVENTORY_FILE, [])
+    for existing in items:
+        if existing["category"] == category and existing["item"] == item:
+            existing["qty"] = qty
+            _save(INVENTORY_FILE, items)
+            return existing
     return None
 
 
-# ---------- INVENTORY ----------
-
-@app.get("/inventory", response_model=List[InventoryOut])
-def list_inventory():
-    logger.info("GET /inventory")
-    items = crud.get_inventory()
-    logger.info("Returning %d inventory items", len(items))
-    return items
-
-
-@app.get("/inventory/item", response_model=InventoryOut)
-def get_inventory_item(category: str, item: str):
-    logger.info("GET /inventory/item category=%s item=%s", category, item)
-    db_item = crud.get_inventory_item(category, item)
-    if not db_item:
-        raise HTTPException(status_code=404, detail="Item not found")
-    return db_item
+def inventory_remove(category: str, item: str) -> Optional[Dict]:
+    items = _load(INVENTORY_FILE, [])
+    for i, inv in enumerate(items):
+        if inv["category"] == category and inv["item"] == item:
+            removed = items.pop(i)
+            _save(INVENTORY_FILE, items)
+            return removed
+    return None
 
 
-@app.post("/inventory", response_model=InventoryOut)
-def create_inventory_item(inv: InventoryCreate):
-    logger.info("POST /inventory category=%s item=%s", inv.category, inv.item)
-    return crud.upsert_inventory_item(inv)
+# ---------------------------------------------------------------------------
+# Order operations
+# ---------------------------------------------------------------------------
+
+def orders_list(
+    store: Optional[str] = None,
+    date: Optional[str] = None,
+    item: Optional[str] = None,
+) -> List[Dict]:
+    orders = _load(ORDERS_FILE, [])
+    results = [
+        o for o in orders
+        if (not store or store.lower() in o.get("store_name", "").lower())
+        and (not date or o.get("submitted_at", "").startswith(date))
+        and (not item or item.lower() in o.get("item", "").lower())
+    ]
+    return sorted(results, key=lambda x: x.get("submitted_at", ""), reverse=True)
 
 
-@app.put("/inventory", response_model=InventoryOut)
-def update_inventory(category: str, item: str, body: InventoryUpdate):
-    logger.info("PUT /inventory category=%s item=%s qty=%s", category, item, body.qty)
-    updated = crud.update_inventory_qty(category, item, body.qty)
-    if not updated:
-        raise HTTPException(status_code=404, detail="Item not found")
-    return updated
+def orders_add(
+    store: str,
+    category: str,
+    item: str,
+    qty: int,
+    date: str,
+    ordered_by: str = "",
+) -> Dict:
+    orders = _load(ORDERS_FILE, [])
+    new_order = {
+        "id": _next_id(orders),
+        "store_name": store,
+        "category": category,
+        "item": item,
+        "qty": qty,
+        "delivery_date": date,
+        "submitted_at": datetime.now().strftime("%Y-%m-%dT%H:%M:%S"),
+        "ordered_by": ordered_by,
+    }
+    orders.append(new_order)
+    _save(ORDERS_FILE, orders)
+    return new_order
 
 
-@app.delete("/inventory/category/{category}", response_model=List[InventoryOut])
-def delete_inventory_category(category: str):
-    logger.info("DELETE /inventory/category/%s", category)
-    deleted = crud.delete_inventory_category(category)
-    if not deleted:
-        raise HTTPException(status_code=404, detail="Category not found or already empty")
-    logger.info("Deleted %d items from category %s", len(deleted), category)
-    return deleted
+def orders_remove(order_id: int) -> Optional[Dict]:
+    orders = _load(ORDERS_FILE, [])
+    for i, order in enumerate(orders):
+        if order.get("id") == order_id:
+            removed = orders.pop(i)
+            _save(ORDERS_FILE, orders)
+            return removed
+    return None
 
 
-@app.delete("/inventory/{category}/{item}", response_model=InventoryOut)
-def delete_inventory_item(category: str, item: str):
-    logger.info("DELETE /inventory/%s/%s", category, item)
-    deleted = crud.delete_inventory_item(category, item)
-    if not deleted:
-        raise HTTPException(status_code=404, detail="Item not found")
-    logger.info("Deleted item %s from category %s", item, category)
-    return deleted
+# ---------------------------------------------------------------------------
+# Delivery-date operations
+# ---------------------------------------------------------------------------
+
+def dates_list() -> List[str]:
+    settings = _load(SETTINGS_FILE, {})
+    value = settings.get("allowed_dates", "")
+    return value.split("|") if value else []
 
 
-# ---------- ORDERS ----------
-
-@app.post("/orders", response_model=OrderOut)
-def create_order(order: OrderCreate):
-    logger.info("POST /orders store=%s item=%s qty=%s", order.store_name, order.item, order.qty)
-    return crud.create_order(order)
-
-
-@app.get("/orders", response_model=List[OrderOut])
-def list_orders(
-        store_name: Optional[str] = None,
-        date_prefix: Optional[str] = None,
-        item_search: Optional[str] = None,
-):
-    logger.info(
-        "GET /orders store_name=%s date_prefix=%s item_search=%s",
-        store_name, date_prefix, item_search,
-    )
-    orders = crud.get_orders(store_name, date_prefix, item_search)
-    logger.info("Returning %d orders", len(orders))
-    return orders
+def dates_set(new_dates: List[str]) -> List[str]:
+    settings = _load(SETTINGS_FILE, {})
+    settings["allowed_dates"] = "|".join(new_dates)
+    _save(SETTINGS_FILE, settings)
+    return new_dates
 
 
-@app.get("/orders/store/{store_name}", response_model=List[OrderOut])
-def list_store_orders(store_name: str):
-    logger.info("GET /orders/store/%s", store_name)
-    orders = crud.get_store_orders(store_name)
-    logger.info("Returning %d orders for store %s", len(orders), store_name)
-    return orders
+def dates_generate() -> List[str]:
+    """Populate allowed dates with tomorrow through 7 days from now."""
+    tomorrow = datetime.now() + timedelta(days=1)
+    new_dates = [
+        (tomorrow + timedelta(days=i)).strftime("%B %d, %Y")
+        for i in range(7)
+    ]
+    return dates_set(new_dates)
 
 
-@app.delete("/orders/{order_id}", response_model=OrderOut)
-def delete_order(order_id: int):
-    logger.info("DELETE /orders/%d", order_id)
-    deleted = crud.delete_order(order_id)
-    if not deleted:
-        raise HTTPException(status_code=404, detail="Order not found")
-    logger.info("Deleted order id=%d", order_id)
-    return deleted
+# ---------------------------------------------------------------------------
+# User operations
+# ---------------------------------------------------------------------------
+
+def users_list() -> List[Dict]:
+    return sorted(_load(USERS_FILE, []), key=lambda x: x.get("store_name", ""))
 
 
-# ---------- SETTINGS / ALLOWED DATES ----------
-
-@app.get("/settings/allowed_dates", response_model=List[str])
-def get_allowed_dates():
-    logger.info("GET /settings/allowed_dates")
-    return crud.get_allowed_dates()
-
-
-@app.put("/settings/allowed_dates", response_model=List[str])
-def update_allowed_dates(body: AllowedDatesUpdate):
-    logger.info("PUT /settings/allowed_dates dates=%s", body.dates)
-    return crud.set_allowed_dates(body.dates)
+def users_add(store: str, username: str) -> Dict:
+    users = _load(USERS_FILE, [])
+    for u in users:
+        if u.get("username") == username:
+            sys.exit(f"ERROR: username '{username}' already exists.")
+    new_user = {"id": _next_id(users), "store_name": store, "username": username}
+    users.append(new_user)
+    _save(USERS_FILE, users)
+    return new_user
 
 
-@app.post("/settings/allowed_dates/generate-tomorrow-week", response_model=List[str])
-def generate_allowed_dates():
-    logger.info("POST /settings/allowed_dates/generate-tomorrow-week")
-    dates = crud.generate_allowed_dates_tomorrow_week()
-    logger.info("Generated allowed dates: %s", dates)
-    return dates
+# ---------------------------------------------------------------------------
+# Pretty-printing helpers
+# ---------------------------------------------------------------------------
+
+def _print_table(rows: List[Dict], columns: List[str]) -> None:
+    if not rows:
+        print("  (no records)")
+        return
+    col_widths = {c: max(len(c), *(len(str(r.get(c, ""))) for r in rows)) for c in columns}
+    header = "  ".join(c.upper().ljust(col_widths[c]) for c in columns)
+    separator = "  ".join("-" * col_widths[c] for c in columns)
+    print(header)
+    print(separator)
+    for row in rows:
+        print("  ".join(str(row.get(c, "")).ljust(col_widths[c]) for c in columns))
 
 
-# ---------- STORES ----------
+# ---------------------------------------------------------------------------
+# CLI command handlers
+# ---------------------------------------------------------------------------
 
-@app.get("/stores/", response_model=List[StoreOut])
-def list_stores():
-    logger.info("GET /stores/")
-    stores = crud.get_stores()
-    logger.info("Returning %d stores", len(stores))
-    return stores
+def cmd_inventory(args: argparse.Namespace) -> None:
+    sub = args.inventory_cmd
 
+    if sub == "list":
+        items = inventory_list()
+        print(f"\nInventory ({len(items)} items)\n")
+        _print_table(items, ["id", "category", "item", "qty"])
+        print()
 
-@app.post("/stores", response_model=StoreOut, status_code=201)
-def create_store(store: StoreCreate):
-    logger.info("POST /stores store_name=%s username=%s", store.store_name, store.username)
-    existing = crud.get_store_by_username(store.username)
-    if existing:
-        raise HTTPException(status_code=409, detail="Username already exists")
-    new_store = crud.create_store(store)
-    logger.info("Created store id=%d name=%s", new_store["id"], new_store["store_name"])
-    return new_store
+    elif sub == "add":
+        result = inventory_add(args.category, args.item, args.qty)
+        print(f"✅  Saved: [{result['id']}] {result['category']} / {result['item']}  qty={result['qty']}")
 
+    elif sub == "update":
+        result = inventory_update(args.category, args.item, args.qty)
+        if result is None:
+            sys.exit(f"ERROR: Item not found: {args.category} / {args.item}")
+        print(f"✅  Updated: [{result['id']}] {result['category']} / {result['item']}  qty={result['qty']}")
 
-@app.post("/stores/reset-password/{store_id}")
-def reset_store_password(store_id: int, body: ResetPasswordRequest):
-    logger.info("POST /stores/reset-password/%d", store_id)
-    store = crud.reset_store_password(store_id, body.new_password)
-    if not store:
-        raise HTTPException(status_code=404, detail="Store not found")
-    return {"message": f"Password reset for {store['store_name']}"}
+    elif sub == "remove":
+        result = inventory_remove(args.category, args.item)
+        if result is None:
+            sys.exit(f"ERROR: Item not found: {args.category} / {args.item}")
+        print(f"🗑️  Removed: [{result['id']}] {result['category']} / {result['item']}")
 
-
-# ---------- AUTH ----------
-
-@app.post("/auth/store-login", response_model=StoreLoginResponse)
-def store_login(body: LoginRequest):
-    logger.info("POST /auth/store-login username=%s", body.username)
-    store = crud.get_store_by_username(body.username)
-    if not store or not verify_password(body.password, store["password"]):
-        raise HTTPException(status_code=401, detail="Invalid username or password")
-    return {"store_id": store["id"], "store_name": store["store_name"], "email": store.get("email")}
+    else:
+        args.inventory_parser.print_help()
 
 
-@app.post("/auth/admin-login")
-def admin_login(body: LoginRequest):
-    logger.info("POST /auth/admin-login username=%s", body.username)
-    admin_username = os.environ.get("ADMIN_USERNAME", "admin")
-    admin_password = os.environ.get("ADMIN_PASSWORD", "admin123")
-    user_ok = secrets.compare_digest(body.username, admin_username)
-    pass_ok = secrets.compare_digest(body.password, admin_password)
-    if not (user_ok and pass_ok):
-        raise HTTPException(status_code=401, detail="Invalid admin credentials")
-    return {"message": "Admin login successful"}
+def cmd_orders(args: argparse.Namespace) -> None:
+    sub = args.orders_cmd
 
-
-@app.get("/auth/validate")
-def validate_username(username: str):
-    logger.info("GET /auth/validate username=%s", username)
-    store = crud.get_store_by_username(username)
-    return {"exists": store is not None}
-
-
-# ---------- ORDERS SUBMIT ----------
-
-@app.post("/orders/submit", response_model=List[OrderOut])
-def submit_orders(items: List[OrderSubmitItem]):
-    logger.info("POST /orders/submit count=%d", len(items))
-    created = []
-    for item in items:
-        store = crud.get_store_by_id(item.store_id)
-        if not store:
-            raise HTTPException(status_code=404, detail=f"Store id {item.store_id} not found")
-        order_in = OrderCreate(
-            store_name=store["store_name"],
-            category=item.category,
-            item=item.item,
-            qty=item.qty,
-            delivery_date=item.delivery_date,
-            submitted_at=item.submitted_at,
-            ordered_by=item.ordered_by,
+    if sub == "list":
+        orders = orders_list(
+            store=getattr(args, "store", None),
+            date=getattr(args, "date", None),
+            item=getattr(args, "item", None),
         )
-        created.append(crud.create_order(order_in))
-    logger.info("Submitted %d orders", len(created))
-    return created
+        print(f"\nOrders ({len(orders)} records)\n")
+        _print_table(orders, ["id", "store_name", "category", "item", "qty", "delivery_date", "submitted_at"])
+        print()
+
+    elif sub == "add":
+        result = orders_add(
+            store=args.store,
+            category=args.category,
+            item=args.item,
+            qty=args.qty,
+            date=args.date,
+            ordered_by=getattr(args, "by", ""),
+        )
+        print(f"✅  Order submitted: [{result['id']}] {result['store_name']} – {result['item']} x{result['qty']} for {result['delivery_date']}")
+
+    elif sub == "remove":
+        result = orders_remove(args.id)
+        if result is None:
+            sys.exit(f"ERROR: Order id {args.id} not found.")
+        print(f"🗑️  Removed order [{result['id']}] – {result['store_name']} / {result['item']}")
+
+    else:
+        args.orders_parser.print_help()
+
+
+def cmd_dates(args: argparse.Namespace) -> None:
+    sub = args.dates_cmd
+
+    if sub == "list":
+        dates = dates_list()
+        if dates:
+            print("\nAllowed delivery dates:")
+            for d in dates:
+                print(f"  • {d}")
+            print()
+        else:
+            print("No allowed delivery dates configured. Run: python main.py dates generate")
+
+    elif sub == "set":
+        result = dates_set(args.dates)
+        print("✅  Allowed delivery dates updated:")
+        for d in result:
+            print(f"  • {d}")
+
+    elif sub == "generate":
+        result = dates_generate()
+        print("✅  Generated allowed delivery dates (tomorrow + 7 days):")
+        for d in result:
+            print(f"  • {d}")
+
+    else:
+        args.dates_parser.print_help()
+
+
+def cmd_users(args: argparse.Namespace) -> None:
+    sub = args.users_cmd
+
+    if sub == "list":
+        users = users_list()
+        print(f"\nUsers ({len(users)} records)\n")
+        _print_table(users, ["id", "store_name", "username"])
+        print()
+
+    elif sub == "add":
+        result = users_add(args.store, args.username)
+        print(f"✅  User added: [{result['id']}] {result['store_name']} ({result['username']})")
+
+    else:
+        args.users_parser.print_help()
+
+
+# ---------------------------------------------------------------------------
+# Argument parser setup
+# ---------------------------------------------------------------------------
+
+def build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        prog="main.py",
+        description="Produce Order App – CLI for managing inventory, orders, delivery dates, and users.",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog=__doc__,
+    )
+
+    sub_cmds = parser.add_subparsers(dest="command", metavar="<command>")
+
+    # ---- inventory ----------------------------------------------------------
+    inv_parser = sub_cmds.add_parser("inventory", help="Manage inventory items")
+    inv_parser.set_defaults(inventory_parser=inv_parser)
+    inv_sub = inv_parser.add_subparsers(dest="inventory_cmd", metavar="<subcommand>")
+
+    inv_sub.add_parser("list", help="List all inventory items")
+
+    inv_add = inv_sub.add_parser("add", help="Add or update an inventory item")
+    inv_add.add_argument("--category", required=True, help="Item category (e.g. Potatoes)")
+    inv_add.add_argument("--item", required=True, help="Item name (e.g. 'White Chef - 50# bags')")
+    inv_add.add_argument("--qty", required=True, type=int, help="Stock quantity")
+
+    inv_upd = inv_sub.add_parser("update", help="Update the quantity of an existing item")
+    inv_upd.add_argument("--category", required=True)
+    inv_upd.add_argument("--item", required=True)
+    inv_upd.add_argument("--qty", required=True, type=int)
+
+    inv_rem = inv_sub.add_parser("remove", help="Remove an inventory item")
+    inv_rem.add_argument("--category", required=True)
+    inv_rem.add_argument("--item", required=True)
+
+    # ---- orders -------------------------------------------------------------
+    ord_parser = sub_cmds.add_parser("orders", help="Manage orders")
+    ord_parser.set_defaults(orders_parser=ord_parser)
+    ord_sub = ord_parser.add_subparsers(dest="orders_cmd", metavar="<subcommand>")
+
+    ord_list = ord_sub.add_parser("list", help="List orders (with optional filters)")
+    ord_list.add_argument("--store", help="Filter by store name (partial match)")
+    ord_list.add_argument("--date", help="Filter by submission date prefix (e.g. 2025-04)")
+    ord_list.add_argument("--item", help="Filter by item name (partial match)")
+
+    ord_add = ord_sub.add_parser("add", help="Submit a new order")
+    ord_add.add_argument("--store", required=True, help="Store name")
+    ord_add.add_argument("--category", required=True, help="Item category")
+    ord_add.add_argument("--item", required=True, help="Item name")
+    ord_add.add_argument("--qty", required=True, type=int, help="Quantity ordered")
+    ord_add.add_argument("--date", required=True, help="Delivery date (e.g. 'April 15, 2025')")
+    ord_add.add_argument("--by", default="", help="Username placing the order")
+
+    ord_rem = ord_sub.add_parser("remove", help="Remove an order by ID")
+    ord_rem.add_argument("--id", required=True, type=int, help="Order ID")
+
+    # ---- dates --------------------------------------------------------------
+    dat_parser = sub_cmds.add_parser("dates", help="Manage allowed delivery dates")
+    dat_parser.set_defaults(dates_parser=dat_parser)
+    dat_sub = dat_parser.add_subparsers(dest="dates_cmd", metavar="<subcommand>")
+
+    dat_sub.add_parser("list", help="Show allowed delivery dates")
+
+    dat_set = dat_sub.add_parser("set", help="Set allowed delivery dates")
+    dat_set.add_argument("dates", nargs="+", metavar="DATE", help="One or more delivery dates")
+
+    dat_sub.add_parser("generate", help="Auto-generate dates for the next 7 days starting tomorrow")
+
+    # ---- users --------------------------------------------------------------
+    usr_parser = sub_cmds.add_parser("users", help="Manage store users")
+    usr_parser.set_defaults(users_parser=usr_parser)
+    usr_sub = usr_parser.add_subparsers(dest="users_cmd", metavar="<subcommand>")
+
+    usr_sub.add_parser("list", help="List all users")
+
+    usr_add = usr_sub.add_parser("add", help="Add a new user")
+    usr_add.add_argument("--store", required=True, help="Store name")
+    usr_add.add_argument("--username", required=True, help="Login username")
+
+    return parser
+
+
+# ---------------------------------------------------------------------------
+# Entry point
+# ---------------------------------------------------------------------------
+
+def main() -> None:
+    parser = build_parser()
+    args = parser.parse_args()
+
+    if args.command == "inventory":
+        cmd_inventory(args)
+    elif args.command == "orders":
+        cmd_orders(args)
+    elif args.command == "dates":
+        cmd_dates(args)
+    elif args.command == "users":
+        cmd_users(args)
+    else:
+        parser.print_help()
+
+
+if __name__ == "__main__":
+    main()
