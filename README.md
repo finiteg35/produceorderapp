@@ -30,6 +30,40 @@ delivery dates, and store users using plain JSON files for storage.
    python main.py --help
    ```
 
+## Deployment (Hostinger VPS + Traefik + Docker Compose)
+
+1. **Prerequisites**
+   - Docker and Docker Compose installed on the VPS
+   - Traefik already running on the VPS
+   - A Docker external network named `traefik_proxy` available to Traefik
+   - A Traefik TLS cert resolver named `letsencrypt` configured
+
+2. **Clone the repository**
+
+   ```bash
+   git clone https://github.com/finiteg35/produceorderapp.git
+   cd produceorderapp
+   ```
+
+3. **Create environment file and set your domain**
+
+   ```bash
+   cp .env.example .env
+   ```
+
+   Then edit `docker-compose.yml` and replace `yourdomain.com` in the Traefik
+   label with your real domain.
+
+4. **Start the app**
+
+   ```bash
+   docker compose up -d
+   ```
+
+5. **Important**
+   - You must replace `yourdomain.com` in `docker-compose.yml` with your actual domain.
+   - JSON flat-file data persists in `./data` on the host (mounted to `/data` in the container).
+
 ## Usage
 
 ```
