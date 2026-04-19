@@ -61,7 +61,6 @@ delivery dates, and store users using plain JSON files for storage.
    ```
 
 5. **Important**
-   - You must replace `yourdomain.com` in `docker-compose.yml` with your actual domain.
    - JSON flat-file data persists in `./data` on the host (mounted to `/data` in the container).
 
 ## Usage
