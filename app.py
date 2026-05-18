@@ -881,7 +881,9 @@ def _qb_push_invoice(inv, vendor_user):
         # Fall back to name matching only if UPC/PLU found nothing
         if not cat_entry:
             cat_entry = _lookup_item(item_name)
-        unit_price = cat_entry.get("price", 0.0)
+        # Use inventory price if already set on the line item — QB catalog is fallback only
+        inv_price = float(li.get("unit_price") or 0.0)
+        unit_price = inv_price if inv_price > 0 else cat_entry.get("price", 0.0)
         item_id    = cat_entry.get("id", "")
         amount     = round(qty * unit_price, 2)
         item_ref   = {"name": item_name}
@@ -3980,11 +3982,6 @@ def catalog_submit():
                             i["qb_doc_number"] = qb_doc
                             if qb_total:
                                 i["total"] = qb_total
-                            if qb_lines:
-                                for idx, li in enumerate(i.get("line_items", [])):
-                                    if idx < len(qb_lines):
-                                        li["unit_price"] = qb_lines[idx]["unit_price"]
-                                        li["total"]      = qb_lines[idx]["total"]
                             # Render barcode PNGs
                             for li in i.get("line_items", []):
                                 if li.get("upc") and li["upc"] != "None" and not li.get("barcode_b64"):
@@ -6197,12 +6194,6 @@ def invoice_qb_sync(invoice_id):
                 i["qb_doc_number"] = qb_doc
                 if qb_total:
                     i["total"] = qb_total
-                # Write QB prices back to line items + render barcode PNGs
-                if qb_lines:
-                    for idx, li in enumerate(i.get("line_items", [])):
-                        if idx < len(qb_lines):
-                            li["unit_price"] = qb_lines[idx]["unit_price"]
-                            li["total"]      = qb_lines[idx]["total"]
                 # Render barcode PNGs for any line items that have a UPC
                 for li in i.get("line_items", []):
                     if li.get("upc") and li["upc"] != "None" and not li.get("barcode_b64"):
