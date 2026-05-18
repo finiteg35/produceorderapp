@@ -47,3 +47,4 @@ htmlcov/
 
 # JSON data store (runtime data – not committed to version control)
 data/
+backups/
